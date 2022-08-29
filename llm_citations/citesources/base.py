@@ -1,4 +1,3 @@
-import json
 import time
 from urllib.parse import urlparse
 
@@ -33,13 +32,16 @@ class CitationSourceBase:
                 self.requests_session = requests.Session()
 
         self.cite_key_list = None
-        self.retrieved_citations = None
+
+        self.citation_manager = None
+
+    def set_citation_manager(self, citation_manager):
+        self.citation_manager = citation_manager
 
 
     def retrieve_citations(self, cite_key_list):
 
         self.cite_key_list = cite_key_list
-        self.retrieved_citations = {}
 
         self.source_initialize_run()
 
@@ -65,26 +67,20 @@ class CitationSourceBase:
                 remaining_keys[:self.chunk_size], remaining_keys[self.chunk_size:]
 
             last_chunk_query_monotonic_s = time.monotonic()
-            retrieved_chunk = self.retrieve_chunk(chunk_ids)
+            self.retrieve_chunk(chunk_ids)
             
-            if retrieved_chunk:
-                self.retrieved_citations.update(retrieved_chunk)
-
             # bookkeeping & logging
             total_retrieved += len(chunk_ids)
             logger.info(f"{self.source_name}: {total_retrieved}/{len(cite_key_list)}")
 
         self.source_finalize_run()
 
-        # set the correct ID property for all citations
-        for k, v in self.retrieved_citations.items():
-            v['id'] = k
-
-        return self.retrieved_citations
-
 
     # helper for fetching URLs
     def fetch_url(self, url, binary=False, json=False, **kwargs):
+
+        if url is None:
+            raise ValueError(f"fetch_url(): url is None!")
 
         logger.debug(f"Fetching URL ‘{url}’ ...")
 
@@ -96,7 +92,7 @@ class CitationSourceBase:
                 open_args, open_kwargs = ('rb',), {}
             else:
                 open_args, open_kwargs = ('r',), { 'encoding': 'utf-8' }
-            with open(p, *open_args, **open_kwargs) as f:
+            with open(p.path, *open_args, **open_kwargs) as f:
                 return f.read()
 
         req_kwargs = {}
@@ -123,10 +119,7 @@ class CitationSourceBase:
         r.encoding = 'utf-8'
 
         if json:
-            #return r.json()
-            text = r.text
-            logger.debug(f"Response text is {text=}")
-            return json.loads(text)
+            return r.json()
 
         return r.text
 

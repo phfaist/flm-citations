@@ -1,0 +1,15 @@
+llm:
+  parsing:
+    enable_comments: true
+  features:
+    - $preset: defaults
+    - name: 'llm_citations.feature_cite.FeatureCiteAuto'
+      config:
+        sources:
+          - $preset: defaults
+          - name: 'bibliographyfile'
+            config:
+              cite_prefix: b
+              bibliography_file:
+                - bibpreset.yaml
+                - anotherbibtest.json

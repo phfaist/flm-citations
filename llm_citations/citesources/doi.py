@@ -47,7 +47,9 @@ class CitationSourceDoi(CitationSourceBase):
 
         doi = chunk_keys[0].strip()
 
-        return { 'doi': _get_doi_citeproc_json_object(doi, self) }
+        self.citation_manager.store_citation(
+            self.cite_prefix, doi, _get_doi_citeproc_json_object(doi, self)
+        )
 
 
 

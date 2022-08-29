@@ -64,8 +64,6 @@ class CitationSourceArxiv(CitationSourceBase):
         if not arxivid_list:
             return {}
 
-        citations = {}
-
         #
         # fetch meta-info from the arxiv for all encountered arXiv IDs, and
         # build the associated citation text endnotes.
@@ -121,21 +119,21 @@ class CitationSourceArxiv(CitationSourceBase):
                     'date-parts': [[
                         result.published.year,
                         result.published.month,
-                        result.published.date,
+                        result.published.day,
                     ]],
                 },
                 'doi': doi,
-                'arxiv_id': arxivid,
+                'arxivid': arxivid,
                 'arxiv_version_number': arxivver,
             }
             
             if arxivid in self.cite_key_list:
-                citations[arxivid] = citeprocjsond
+                self.citation_manager.store_citation(self.cite_prefix, arxivid, citeprocjsond)
 
             if arxivid in self.data_for_versionless_arxivid:
                 self.data_for_versionless_arxivid[arxivid].append( citeprocjsond )
 
-        return citations
+        return
 
     def source_finalize_run(self):
 
@@ -176,17 +174,18 @@ class CitationSourceArxiv(CitationSourceBase):
         doi = csljsondata.get('doi', None)
         if doi and self.chain_to_doi:
             # chain to DOI
-            self.retrieved_citations[arxivid] = {
-                'chained': {
-                    'cite_prefix': 'doi',
-                    'cite_key': doi,
-                    'set_properties': {
-                        'arxiv': arxivid
-                    },
+            self.citation_manager.store_citation_chained(
+                self.cite_prefix, arxivid,
+                'doi', doi,
+                {
+                    'arxivid': arxivid,
                 },
-            }
+            )
         else:
-            self.retrieved_citations[arxivid] = csljsondata
+            self.citation_manager.store_citation(self.cite_prefix, arxivid, csljsondata)
+
+
+
 
 # for when using shorthane naming
 CitationSourceClass = CitationSourceArxiv

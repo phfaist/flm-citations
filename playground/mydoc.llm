@@ -1,21 +1,17 @@
 ---
-llm:
-  features:
-    - $preset: defaults
-    - name: 'llm_citations.feature_cite.FeatureCiteAuto'
-      config:
-        sources:
-          arxiv:
-            name: 'arxiv'
-          doi:
-            name: 'doi'
-          manual:
-            name: 'manual'
+$preset: import
+$target: llmconfig.yaml
 ---
-
+%
+% Here is a comment!
+%
 \section{Section Title}
 
 Hi there!  This is my document~\cite{arxiv:1211.3141}.
 
-What's up with~\cite{arxiv:2009.04469,arxiv:2208.06306}?
+What's up with~\cite{arxiv:2009.04469,arxiv:2208.06306}?  I can also
+check~\cite{manual:{Me \emph{et al.}, Journal of Results I Should Have Published
+Earlier (2022)}}.  Also a
+citation~\cite{b:Li2022arXiv_wasserstein,b:PreskillNotes} from my own
+bibliography file which I provided here.
 

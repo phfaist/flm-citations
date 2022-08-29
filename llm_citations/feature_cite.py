@@ -1,5 +1,10 @@
 import json
 import importlib
+import warnings
+import copy
+import os.path
+import datetime
+from urllib.parse import quote as urlquote
 
 import logging
 logger = logging.getLogger(__name__)
@@ -23,20 +28,20 @@ def importclass(fullname):
     return getattr(mod, classname)
 
 
-_default_citation_sources_spec = {
-    'arxiv': {
+_default_citation_sources_spec = [
+    {
         'name': 'arxiv',
         'config': {},
     },
-    'doi': {
+    {
         'name': 'doi',
         'config': {},
     },
-    'manual': {
+    {
         'name': 'manual',
         'config': {},
-    }
-}
+    },
+]
 
 class FeatureCiteAuto(FeatureExternalPrefixedCitations):
     r"""
@@ -51,6 +56,14 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
       `llm.feature.cite.FeatureExternalPrefixedCitations`.
     """
 
+    add_arxiv_link = True
+    add_doi_link = True
+    add_url_link = 'only-if-no-arxiv-or-doi' # = only added if there's no arxiv or doi link
+
+    default_config = {
+        'sources': _default_citation_sources_spec,
+    }
+
     class RenderManager(FeatureExternalPrefixedCitations.RenderManager):
         
         def get_citation_content_llm(self, cite_prefix, cite_key, resource_info):
@@ -59,9 +72,12 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
             result = _generate_citation_llm_from_citeprocjsond(
                 csljson,
-                self.feature.bib_csl_style,
-                str(resource_info),
-                self.render_context.doc.environment
+                bib_csl_style=self.feature.bib_csl_style,
+                what=str(resource_info),
+                llm_environment=self.render_context.doc.environment,
+                add_arxiv_link=self.feature.add_arxiv_link,
+                add_doi_link=self.feature.add_doi_link,
+                add_url_link=self.feature.add_url_link,
             )
 
             return result
@@ -71,6 +87,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                  sources=None,
                  bib_csl_style=None,
                  cache_file='.llm-citations.cache.json',
+                 cache_entry_duration_dt=datetime.timedelta(days=30),
                  **kwargs):
 
         super().__init__(external_citations_provider=None, **kwargs)
@@ -80,7 +97,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
         self.citation_sources = {}
 
-        for cite_prefix, citation_source_spec in sources.items():
+        for citation_source_spec in sources:
 
             cname = citation_source_spec['name']
             cconfig = citation_source_spec.get('config', {})
@@ -89,7 +106,9 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 cname = f"llm_citations.citesources.{cname}.CitationSourceClass"
 
             TheClass = importclass(cname)
-            self.citation_sources[cite_prefix] = TheClass(**cconfig)
+            thesource = TheClass(**cconfig)
+            thesource.set_citation_manager(self)
+            self.citation_sources[thesource.cite_prefix] = thesource
 
         if bib_csl_style is None:
             bib_csl_style = "harvard1"
@@ -98,16 +117,50 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
         self.cache_file = cache_file
 
+        self.cache_entry_duration_dt = cache_entry_duration_dt
+
         self.citations_db = {
             cite_prefix: {}
             for cite_prefix in self.citation_sources.keys()
         }
 
+        logger.debug(f"citation_sources are {self.citation_sources!r}")
+
+        self.load_cache()
+
+        self.new_chained_citations = None
+
+    def load_cache(self):
+        if os.path.exists(self.cache_file):
+            logger.debug(f"Loading cache file ‘{self.cache_file}’")
+            try:
+                with open(self.cache_file, 'r', encoding='utf-8') as f:
+                    self.citations_db.update(json.load(f))
+                # check for expired entries
+                now = datetime.datetime.now()
+                for cite_prefix, cite_key_dict in self.citations_db.items():
+                    cite_keys_list = list(cite_key_dict.keys())
+                    for cite_key in cite_keys_list:
+                        dexpires = datetime.datetime.fromisoformat(
+                            self.citations_db[cite_prefix][cite_key]['expires']
+                        )
+                        if dexpires < now:
+                            del self.citations_db[cite_prefix][cite_key]
+            except Exception as e:
+                logger.warning(
+                    f"Failure while loading cache file ‘{self.cache_file}’: {e}, ignoring ..."
+                )
+                return
+
+    def save_cache(self):
+        with open(self.cache_file, 'w', encoding='utf-8') as fw:
+            json.dump(self.citations_db, fw)
+
     def get_citation_csljson(self, cite_prefix, cite_key):
         orig_cite_prefix, orig_cite_key = cite_prefix, cite_key
         set_properties_chain = {}
         while True:
-            csljson = citations_db[cite_prefix][cite_key]
+            csljson = self.citations_db[cite_prefix][cite_key]['entry']
             if 'chained' not in csljson:
                 # make sure we have the correct ID set
                 origid = f"{orig_cite_prefix}:{orig_cite_key}"
@@ -127,6 +180,46 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
             # ... and repeat !
 
+    def store_citation(self, cite_prefix, cite_key, csljson):
+
+        if csljson.get('chained', None):
+            new_cite_prefix = csljson['chained']['cite_prefix']
+            new_cite_key = csljson['chained']['cite_key']
+
+            if new_cite_prefix not in self.citation_sources:
+                raise ValueError(
+                    f"No source registered for cite prefix ‘{new_cite_prefix}’ in "
+                    f"chained citation retreival for ‘{cite_prefix}:{cite_key}’"
+                )
+
+        cslentry = dict(csljson, id=f"{cite_prefix}:{cite_key}")
+
+        self.citations_db[cite_prefix][cite_key] = {
+            'entry': cslentry,
+            'expires': (datetime.datetime.now() + self.cache_entry_duration_dt).isoformat()
+        }
+
+        # save cache at each store
+        self.save_cache()
+        
+    def store_citation_chained(self, cite_prefix, cite_key,
+                               new_cite_prefix, new_cite_key, set_properties):
+
+        self.store_citation(
+            cite_prefix,
+            cite_key,
+            # special JSON entry to store in cache
+            {
+                'chained': {
+                    'cite_prefix': new_cite_prefix,
+                    'cite_key': new_cite_key,
+                    'set_properties': dict(set_properties),
+                }
+            },
+        )
+
+        self.new_chained_citations.append( (cite_prefix, cite_key) )
+
 
     def llm_main_scan_fragment(self, fragment):
 
@@ -135,7 +228,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
         fragment.start_node_visitor(scanner)
 
         retrieve_citation_keys_by_prefix = {
-            cite_prefix: []
+            cite_prefix: set()
             for cite_prefix in self.citation_sources.keys()
         }
 
@@ -148,40 +241,47 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                     f"{c['encountered_in']['what']}"
                 )
 
-            retrieve_citation_keys_by_prefix[c['cite_prefix']].append(c['cite_key'])
+            retrieve_citation_keys_by_prefix[c['cite_prefix']].add(c['cite_key'])
 
         while any(retrieve_citation_keys_by_prefix.values()):
 
-            for cite_prefix, cite_key_list in retrieve_citation_keys_by_prefix.items():
+            self.new_chained_citations = []
 
-                logger.debug(f"Keys to retrieve: {cite_prefix} -> {cite_key_list}")
+            for cite_prefix, cite_key_set in retrieve_citation_keys_by_prefix.items():
 
-                new_citations = \
-                    self.citation_sources[cite_prefix].retrieve_citations(cite_key_list)
+                logger.debug(f"Keys to retrieve: {cite_prefix} -> {cite_key_set}")
+                self.citation_sources[cite_prefix].retrieve_citations(list(cite_key_set))
 
-                self.citations_db[cite_prefix].update(new_citations)
+            #logger.debug(f"At this point, {self.citations_db = }")
 
+            retrieve_citation_keys_by_prefix = {
+                cite_prefix: set()
+                for cite_prefix in self.citation_sources.keys()
+            }
 
             # check if there are chained citations that we need to retrieve as well
-            for cite_prefix, db in self.citations_db.items():
-                for cite_key, csljson in db.items():
-                    if 'chained' in csljson:
-                        chained = csljson['chained']
-                        chained_cite_prefix, chained_cite_key = \
-                            chained['cite_prefix'], chained['cite_key']
-                        if chained_cite_key not in self.citations_db[chained_cite_prefix]:
-                            # add this one for retrieval
-                            retrieve_citation_keys_by_prefix[chained_cite_prefix].append(
-                                chained_cite_key
-                            )
+            for cite_prefix, cite_key in self.new_chained_citations:
+                csljson = self.citations_db[cite_prefix][cite_key]['entry']
+                chained = csljson['chained']
+                chained_cite_prefix, chained_cite_key = \
+                    chained['cite_prefix'], chained['cite_key']
+                if chained_cite_key not in self.citations_db[chained_cite_prefix]:
+                    # add this one for retrieval
+                    retrieve_citation_keys_by_prefix[chained_cite_prefix].add(
+                        chained_cite_key
+                    )
+                    #logger.debug(f"Adding ‘{chained_cite_prefix}:{chained_cite_key}’ for retrieval")
 
 
 
-def _generate_citation_llm_from_citeprocjsond(citeprocjsond, bib_csl_style, what, llmenviron):
+def _generate_citation_llm_from_citeprocjsond(
+        citeprocjsond, bib_csl_style, what, llm_environment, *,
+        add_arxiv_link, add_doi_link, add_url_link,
+):
 
     if '_formatted_llm_text' in citeprocjsond:
         # work is already done for us -- go!
-        return llmenviron.make_fragment(
+        return llm_environment.make_fragment(
             citeprocjsond['_formatted_llm_text'],
             what=what,
             standalone_mode=True,
@@ -220,7 +320,7 @@ def _generate_citation_llm_from_citeprocjsond(citeprocjsond, bib_csl_style, what
             else:
                 try:
                     # try compiling the given value, suppressing warnings
-                    llmenviron.make_fragment(
+                    llm_environment.make_fragment(
                         str(d),
                         standalone_mode=True,
                         silent=True
@@ -249,11 +349,28 @@ def _generate_citation_llm_from_citeprocjsond(citeprocjsond, bib_csl_style, what
             bibliography.register(citation1)
             bibliography_items = [str(item) for item in bibliography.bibliography()]
             assert len(bibliography_items) == 1
-            return bibliography_items[0]
+            result = bibliography_items[0]
+
+            arxivid = citeprocjsond.get('arxivid', None)
+            if arxivid and add_arxiv_link:
+                result += ' \href{https://arxiv.org/abs/'+arxivid+'}{'+arxivid+'}'
+
+            doi = citeprocjsond.get('doi', None) or citeprocjsond.get('DOI', None)
+            if doi and add_doi_link:
+                doiurl = 'https://doi.org/'+urlquote(doi)
+                result += ' \href{'+doiurl+'}{DOI}'
+
+            url = citeprocjsond.get('URL', None)
+            if url and (add_url_link is True or
+                        (add_url_link == 'only-if-no-arxiv-or-doi'
+                         and not arxivid and not doi)):
+                result += ' \href{'+url+'}{URL}'
+
+            return result
 
         try:
             logger.debug(f"Attempting to generate entry for {citekey}...")
-            return llmenviron.make_fragment(
+            return llm_environment.make_fragment(
                 _gen_entry(citeprocjsond),
                 what=what,
                 standalone_mode=True,
@@ -265,7 +382,7 @@ def _generate_citation_llm_from_citeprocjsond(citeprocjsond, bib_csl_style, what
 
         _sanitize(citeprocjsond)
         try:
-            return llmenviron.make_fragment(
+            return llm_environment.make_fragment(
                 _gen_entry(citeprocjsond),
                 standalone_mode=True,
                 what=what

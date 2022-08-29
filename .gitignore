@@ -1,3 +1,6 @@
 *~
 .DS_Store
 __pycache__
+
+playground/.llm-citations.cache.json
+playground/mydoc.html

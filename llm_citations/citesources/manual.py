@@ -1,3 +1,4 @@
+import sys
 
 from .base import CitationSourceBase
 
@@ -9,7 +10,7 @@ class CitationSourceManual(CitationSourceBase):
         override_options = {
             'chains_to_sources': [],
             'source_name': 'Manual citation info source',
-            'chunk_size': float('inf'),
+            'chunk_size': sys.maxsize,
             'chunk_query_delay_ms': 0,
         }
         default_options = {
@@ -26,14 +27,15 @@ class CitationSourceManual(CitationSourceBase):
 
     def retrieve_chunk(self, chunk_keys):
 
-        citations = {}
-
         for key in chunk_keys:
-            citations[key] = {
-                '_formatted_llm_text': key, # that was hard
-            }
+            self.citation_manager.store_citation(
+                self.cite_prefix, key,
+                {
+                    '_formatted_llm_text': key, # well that was hard
+                }
+            )
 
-        return citations
+        return
 
 
 

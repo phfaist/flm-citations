@@ -23,7 +23,7 @@ class CitationsScanner(LatexNodesVisitor):
                         cite_key=cite_key,
                         encountered_in=dict(
                             resource_info=node.latex_walker.resource_info,
-                            what=f"{node.latex_walker.what} @ {node.pos}",
+                            what=f"{node.latex_walker.what} @ {node.latex_walker.pos_to_lineno_colno(node.pos)!r}",
                         )
                     )
                 )
