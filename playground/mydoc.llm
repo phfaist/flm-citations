@@ -1,0 +1,21 @@
+---
+llm:
+  features:
+    - $preset: defaults
+    - name: 'llm_citations.feature_cite.FeatureCiteAuto'
+      config:
+        sources:
+          arxiv:
+            name: 'arxiv'
+          doi:
+            name: 'doi'
+          manual:
+            name: 'manual'
+---
+
+\section{Section Title}
+
+Hi there!  This is my document~\cite{arxiv:1211.3141}.
+
+What's up with~\cite{arxiv:2009.04469,arxiv:2208.06306}?
+

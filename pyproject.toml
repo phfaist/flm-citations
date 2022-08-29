@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "llm-citations"
+version = "0.1.0"
+description = "Support for citations in LLM (see llm package)"
+authors = ["Philippe Faist"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+citeproc-py = {'git' = "https://github.com/phfaist/citeproc-py.git"}
+llm = {'git' = "https://github.com/phfaist/llm.git", branch = "main"}
+arxiv = "^1.4.2"
+PyYAML = "^6.0"
+requests = "^2.28.1"
+backoff = "^2.1.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
