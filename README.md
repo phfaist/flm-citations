@@ -4,7 +4,7 @@ See the [LLM README file](https://github.com/phfaist/llm/blob/main/README.md).
 
 Install with:
 ```bash
-$ pip install git+https://github.com/phfaist/llm-citations.git
+$ pip install git+https://github.com/phfaist/llm-citations.git@main
 ```
 
 Use the additional config front matter in your LLM files to enable citations
