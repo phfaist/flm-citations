@@ -62,7 +62,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
     add_arxiv_link = True
     add_doi_link = True
-    add_url_link = 'only-if-no-arxiv-or-doi' # = only added if there's no arxiv or doi link
+    add_url_link = 'only-if-no-other-link' # = only added if there's no arxiv or doi link
 
     default_config = {
         'sources': _default_citation_sources_spec,
@@ -383,7 +383,7 @@ def _generate_citation_llm_from_citeprocjsond(
 
             url = citeprocjsond.get('URL', None)
             if url and (add_url_link is True or
-                        (add_url_link == 'only-if-no-arxiv-or-doi'
+                        (add_url_link == 'only-if-no-other-link'
                          and not arxivid and not doi)):
                 result += ' \href{'+url+'}{URL}'
 
