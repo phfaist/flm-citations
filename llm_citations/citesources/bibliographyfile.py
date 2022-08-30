@@ -1,3 +1,4 @@
+import re
 import sys
 import json
 import yaml
@@ -9,9 +10,22 @@ logger = logging.getLogger(__name__)
 from .base import CitationSourceBase
 
 
+_vars = {
+    'jobname': lambda doc: doc.metadata['jobname'],
+}
+
+_rx_vars = re.compile(r'\$\{(' + "|".join(re.escape(v) for v in _vars) + ')\}')
+
+def _replace_vars(x, doc):
+    return _rx_vars.sub(
+        lambda m: _vars[m.group(1)] (doc),
+        x
+    )
+
+
 class CitationSourceBibliographyFile(CitationSourceBase):
 
-    def __init__(self, bibliography_file, **kwargs):
+    def __init__(self, bibliography_file=None, **kwargs):
 
         override_options = {
             'chains_to_sources': [],
@@ -20,7 +34,7 @@ class CitationSourceBibliographyFile(CitationSourceBase):
             'chunk_query_delay_ms': 0,
         }
         default_options = {
-            'cite_prefix': 'bibfile',
+            'cite_prefix': 'bib',
             'use-requests': True, # to retrieve possibly remote bib files
         }
 
@@ -30,10 +44,29 @@ class CitationSourceBibliographyFile(CitationSourceBase):
             default_options,
         )
 
+        doc = kwargs['doc']
+
+        if bibliography_file is None:
+            # specified manually in metadata
+            if 'bibliography' in doc.metadata['config']:
+                bibliography_file = doc.metadata['config']['bibliography']
+            else:
+                # derived from jobname
+                bibfile = doc.metadata['jobname'] + '.bib.json'
+                if os.path.exists(bibfile):
+                    bibliography_files = [ bibfile ]
+                else:
+                    bibliography_files = []
+
         if isinstance(bibliography_file, str):
-            self.bibliography_files = [ bibliography_file ]
+            bibliography_files = [ bibliography_file ]
         else:
-            self.bibliography_files = bibliography_file
+            bibliography_files = bibliography_file
+
+        bibliography_files = [ _replace_vars(b, doc)
+                               for b in bibliography_files ]
+
+        self.bibliography_files = bibliography_files
 
         logger.debug(f"bib file citation source ({self.cite_prefix=}), "
                      f"{self.bibliography_files=}")

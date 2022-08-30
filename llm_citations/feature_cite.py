@@ -41,6 +41,10 @@ _default_citation_sources_spec = [
         'name': 'manual',
         'config': {},
     },
+    {
+        'name': 'bibliographyfile',
+        'config': {},
+    },
 ]
 
 class FeatureCiteAuto(FeatureExternalPrefixedCitations):
@@ -68,11 +72,13 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
         
         def get_citation_content_llm(self, cite_prefix, cite_key, resource_info):
 
-            csljson = self.feature.get_citation_csljson(cite_prefix, cite_key)
+            fdocmgr = self.feature_document_manager
+
+            csljson = fdocmgr.get_citation_csljson(cite_prefix, cite_key)
 
             result = _generate_citation_llm_from_citeprocjsond(
                 csljson,
-                bib_csl_style=self.feature.bib_csl_style,
+                bib_csl_style=fdocmgr.bib_csl_style,
                 what=str(resource_info),
                 llm_environment=self.render_context.doc.environment,
                 add_arxiv_link=self.feature.add_arxiv_link,
@@ -81,6 +87,192 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
             )
 
             return result
+
+    class DocumentManager(FeatureExternalPrefixedCitations.DocumentManager):
+
+        def initialize(self):
+            super().initialize()
+
+            self.citation_sources = {}
+
+            for citation_source_spec in self.feature.sources:
+
+                cname = citation_source_spec['name']
+                cconfig = citation_source_spec.get('config', {})
+
+                if '.' not in cname:
+                    cname = f"llm_citations.citesources.{cname}.CitationSourceClass"
+
+                cconfig.update(doc=self.doc)
+
+                TheClass = importclass(cname)
+                thesource = TheClass(**cconfig)
+                thesource.set_citation_manager(self)
+                self.citation_sources[thesource.cite_prefix] = thesource
+
+            bib_csl_style = self.feature.bib_csl_style
+            if bib_csl_style is None:
+                bib_csl_style = "harvard1"
+            self.bib_csl_style = \
+                citeproc.CitationStylesStyle(bib_csl_style, validate=False)
+
+            self.citations_db = {
+                cite_prefix: {}
+                for cite_prefix in self.citation_sources.keys()
+            }
+
+            logger.debug(f"citation_sources are {self.citation_sources!r}")
+
+            self.load_cache()
+
+            self.new_chained_citations = None
+
+        def load_cache(self):
+            if os.path.exists(self.feature.cache_file):
+                logger.debug(f"Loading cache file ‘{self.feature.cache_file}’")
+                try:
+                    with open(self.feature.cache_file, 'r', encoding='utf-8') as f:
+                        self.citations_db.update(json.load(f))
+                    # check for expired entries
+                    now = datetime.datetime.now()
+                    for cite_prefix, cite_key_dict in self.citations_db.items():
+                        cite_keys_list = list(cite_key_dict.keys())
+                        for cite_key in cite_keys_list:
+                            dexpires = datetime.datetime.fromisoformat(
+                                self.citations_db[cite_prefix][cite_key]['expires']
+                            )
+                            if dexpires < now:
+                                del self.citations_db[cite_prefix][cite_key]
+                except Exception as e:
+                    logger.warning(
+                        f"Failure while loading cache file ‘{self.feature.cache_file}’: "
+                        f"{e}, ignoring ..."
+                    )
+                    return
+
+        def save_cache(self):
+            with open(self.feature.cache_file, 'w', encoding='utf-8') as fw:
+                json.dump(self.citations_db, fw)
+
+
+        def get_citation_csljson(self, cite_prefix, cite_key):
+            orig_cite_prefix, orig_cite_key = cite_prefix, cite_key
+            set_properties_chain = {}
+            while True:
+                csljson = self.citations_db[cite_prefix][cite_key]['entry']
+                if 'chained' not in csljson:
+                    # make sure we have the correct ID set
+                    origid = f"{orig_cite_prefix}:{orig_cite_key}"
+                    if set_properties_chain:
+                        csljson = dict(csljson, **set_properties_chain)
+                    if csljson['id'] != origid:
+                        return dict(csljson, id=origid)
+                    return csljson
+
+                # chained citation, follow chain
+                cite_prefix = csljson['chained']['cite_prefix']
+                cite_key = csljson['chained']['cite_key']
+                set_properties_chain = dict(
+                    csljson['chained']['set_properties'],
+                    **set_properties_chain
+                )
+
+                # ... and repeat !
+
+        def store_citation(self, cite_prefix, cite_key, csljson):
+
+            if csljson.get('chained', None):
+                new_cite_prefix = csljson['chained']['cite_prefix']
+                new_cite_key = csljson['chained']['cite_key']
+
+                if new_cite_prefix not in self.citation_sources:
+                    raise ValueError(
+                        f"No source registered for cite prefix ‘{new_cite_prefix}’ in "
+                        f"chained citation retreival for ‘{cite_prefix}:{cite_key}’"
+                    )
+
+            cslentry = dict(csljson, id=f"{cite_prefix}:{cite_key}")
+
+            self.citations_db[cite_prefix][cite_key] = {
+                'entry': cslentry,
+                'expires': (datetime.datetime.now()
+                            + self.feature.cache_entry_duration_dt).isoformat()
+            }
+
+            # save cache at each store
+            self.save_cache()
+
+        def store_citation_chained(self, cite_prefix, cite_key,
+                                   new_cite_prefix, new_cite_key, set_properties):
+
+            self.store_citation(
+                cite_prefix,
+                cite_key,
+                # special JSON entry to store in cache
+                {
+                    'chained': {
+                        'cite_prefix': new_cite_prefix,
+                        'cite_key': new_cite_key,
+                        'set_properties': dict(set_properties),
+                    }
+                },
+            )
+
+            self.new_chained_citations.append( (cite_prefix, cite_key) )
+
+
+        def llm_main_scan_fragment(self, fragment):
+
+            scanner = CitationsScanner()
+
+            fragment.start_node_visitor(scanner)
+
+            retrieve_citation_keys_by_prefix = {
+                cite_prefix: set()
+                for cite_prefix in self.citation_sources.keys()
+            }
+
+            for c in scanner.get_encountered_citations():
+                logger.debug(f"Found citation {c=!r}")
+
+                if c['cite_prefix'] not in retrieve_citation_keys_by_prefix:
+                    raise ValueError(
+                        f"Invalid citation prefix ‘{c['cite_prefix']}’ in "
+                        f"{c['encountered_in']['what']}"
+                    )
+
+                retrieve_citation_keys_by_prefix[c['cite_prefix']].add(c['cite_key'])
+
+            while any(retrieve_citation_keys_by_prefix.values()):
+
+                self.new_chained_citations = []
+
+                for cite_prefix, cite_key_set in retrieve_citation_keys_by_prefix.items():
+
+                    logger.debug(f"Keys to retrieve: {cite_prefix} -> {cite_key_set}")
+                    self.citation_sources[cite_prefix].retrieve_citations(list(cite_key_set))
+
+                #logger.debug(f"At this point, {self.citations_db = }")
+
+                retrieve_citation_keys_by_prefix = {
+                    cite_prefix: set()
+                    for cite_prefix in self.citation_sources.keys()
+                }
+
+                # check if there are chained citations that we need to retrieve as well
+                for cite_prefix, cite_key in self.new_chained_citations:
+                    csljson = self.citations_db[cite_prefix][cite_key]['entry']
+                    chained = csljson['chained']
+                    chained_cite_prefix, chained_cite_key = \
+                        chained['cite_prefix'], chained['cite_key']
+                    if chained_cite_key not in self.citations_db[chained_cite_prefix]:
+                        # add this one for retrieval
+                        retrieve_citation_keys_by_prefix[chained_cite_prefix].add(
+                            chained_cite_key
+                        )
+                        #logger.debug(f"Adding ‘{chained_cite_prefix}:{chained_cite_key}’ "
+                        #             f"for retrieval")
+
 
 
     def __init__(self,
@@ -94,183 +286,12 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
         if sources is None:
             sources = _default_citation_sources_spec
+        self.sources = sources
 
-        self.citation_sources = {}
-
-        for citation_source_spec in sources:
-
-            cname = citation_source_spec['name']
-            cconfig = citation_source_spec.get('config', {})
-
-            if '.' not in cname:
-                cname = f"llm_citations.citesources.{cname}.CitationSourceClass"
-
-            TheClass = importclass(cname)
-            thesource = TheClass(**cconfig)
-            thesource.set_citation_manager(self)
-            self.citation_sources[thesource.cite_prefix] = thesource
-
-        if bib_csl_style is None:
-            bib_csl_style = "harvard1"
-
-        self.bib_csl_style = citeproc.CitationStylesStyle(bib_csl_style, validate=False)
+        self.bib_csl_style = bib_csl_style
 
         self.cache_file = cache_file
-
         self.cache_entry_duration_dt = cache_entry_duration_dt
-
-        self.citations_db = {
-            cite_prefix: {}
-            for cite_prefix in self.citation_sources.keys()
-        }
-
-        logger.debug(f"citation_sources are {self.citation_sources!r}")
-
-        self.load_cache()
-
-        self.new_chained_citations = None
-
-    def load_cache(self):
-        if os.path.exists(self.cache_file):
-            logger.debug(f"Loading cache file ‘{self.cache_file}’")
-            try:
-                with open(self.cache_file, 'r', encoding='utf-8') as f:
-                    self.citations_db.update(json.load(f))
-                # check for expired entries
-                now = datetime.datetime.now()
-                for cite_prefix, cite_key_dict in self.citations_db.items():
-                    cite_keys_list = list(cite_key_dict.keys())
-                    for cite_key in cite_keys_list:
-                        dexpires = datetime.datetime.fromisoformat(
-                            self.citations_db[cite_prefix][cite_key]['expires']
-                        )
-                        if dexpires < now:
-                            del self.citations_db[cite_prefix][cite_key]
-            except Exception as e:
-                logger.warning(
-                    f"Failure while loading cache file ‘{self.cache_file}’: {e}, ignoring ..."
-                )
-                return
-
-    def save_cache(self):
-        with open(self.cache_file, 'w', encoding='utf-8') as fw:
-            json.dump(self.citations_db, fw)
-
-    def get_citation_csljson(self, cite_prefix, cite_key):
-        orig_cite_prefix, orig_cite_key = cite_prefix, cite_key
-        set_properties_chain = {}
-        while True:
-            csljson = self.citations_db[cite_prefix][cite_key]['entry']
-            if 'chained' not in csljson:
-                # make sure we have the correct ID set
-                origid = f"{orig_cite_prefix}:{orig_cite_key}"
-                if set_properties_chain:
-                    csljson = dict(csljson, **set_properties_chain)
-                if csljson['id'] != origid:
-                    return dict(csljson, id=origid)
-                return csljson
-
-            # chained citation, follow chain
-            cite_prefix = csljson['chained']['cite_prefix']
-            cite_key = csljson['chained']['cite_key']
-            set_properties_chain = dict(
-                csljson['chained']['set_properties'],
-                **set_properties_chain
-            )
-
-            # ... and repeat !
-
-    def store_citation(self, cite_prefix, cite_key, csljson):
-
-        if csljson.get('chained', None):
-            new_cite_prefix = csljson['chained']['cite_prefix']
-            new_cite_key = csljson['chained']['cite_key']
-
-            if new_cite_prefix not in self.citation_sources:
-                raise ValueError(
-                    f"No source registered for cite prefix ‘{new_cite_prefix}’ in "
-                    f"chained citation retreival for ‘{cite_prefix}:{cite_key}’"
-                )
-
-        cslentry = dict(csljson, id=f"{cite_prefix}:{cite_key}")
-
-        self.citations_db[cite_prefix][cite_key] = {
-            'entry': cslentry,
-            'expires': (datetime.datetime.now() + self.cache_entry_duration_dt).isoformat()
-        }
-
-        # save cache at each store
-        self.save_cache()
-        
-    def store_citation_chained(self, cite_prefix, cite_key,
-                               new_cite_prefix, new_cite_key, set_properties):
-
-        self.store_citation(
-            cite_prefix,
-            cite_key,
-            # special JSON entry to store in cache
-            {
-                'chained': {
-                    'cite_prefix': new_cite_prefix,
-                    'cite_key': new_cite_key,
-                    'set_properties': dict(set_properties),
-                }
-            },
-        )
-
-        self.new_chained_citations.append( (cite_prefix, cite_key) )
-
-
-    def llm_main_scan_fragment(self, fragment):
-
-        scanner = CitationsScanner()
-
-        fragment.start_node_visitor(scanner)
-
-        retrieve_citation_keys_by_prefix = {
-            cite_prefix: set()
-            for cite_prefix in self.citation_sources.keys()
-        }
-
-        for c in scanner.get_encountered_citations():
-            logger.debug(f"Found citation {c=!r}")
-
-            if c['cite_prefix'] not in retrieve_citation_keys_by_prefix:
-                raise ValueError(
-                    f"Invalid citation prefix ‘{c['cite_prefix']}’ in "
-                    f"{c['encountered_in']['what']}"
-                )
-
-            retrieve_citation_keys_by_prefix[c['cite_prefix']].add(c['cite_key'])
-
-        while any(retrieve_citation_keys_by_prefix.values()):
-
-            self.new_chained_citations = []
-
-            for cite_prefix, cite_key_set in retrieve_citation_keys_by_prefix.items():
-
-                logger.debug(f"Keys to retrieve: {cite_prefix} -> {cite_key_set}")
-                self.citation_sources[cite_prefix].retrieve_citations(list(cite_key_set))
-
-            #logger.debug(f"At this point, {self.citations_db = }")
-
-            retrieve_citation_keys_by_prefix = {
-                cite_prefix: set()
-                for cite_prefix in self.citation_sources.keys()
-            }
-
-            # check if there are chained citations that we need to retrieve as well
-            for cite_prefix, cite_key in self.new_chained_citations:
-                csljson = self.citations_db[cite_prefix][cite_key]['entry']
-                chained = csljson['chained']
-                chained_cite_prefix, chained_cite_key = \
-                    chained['cite_prefix'], chained['cite_key']
-                if chained_cite_key not in self.citations_db[chained_cite_prefix]:
-                    # add this one for retrieval
-                    retrieve_citation_keys_by_prefix[chained_cite_prefix].add(
-                        chained_cite_key
-                    )
-                    #logger.debug(f"Adding ‘{chained_cite_prefix}:{chained_cite_key}’ for retrieval")
 
 
 

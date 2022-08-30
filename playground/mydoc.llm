@@ -1,6 +1,12 @@
 ---
 $preset: import
-$target: llmconfig.yaml
+$target: https://raw.githubusercontent.com/phfaist/llm-citations/main/llmconfig.yaml
+llm:
+  parsing:
+    enable_comments: true
+bibliography:
+- bibpreset.yaml
+- anotherbibtest.json
 ---
 %
 % Here is a comment!
@@ -12,6 +18,6 @@ Hi there!  This is my document~\cite{arxiv:1211.3141}.
 What's up with~\cite{arxiv:2009.04469,arxiv:2208.06306}?  I can also
 check~\cite{manual:{Me \emph{et al.}, Journal of Results I Should Have Published
 Earlier (2022)}}.  Also a
-citation~\cite{b:Li2022arXiv_wasserstein,b:PreskillNotes} from my own
+citation~\cite{bib:Li2022arXiv_wasserstein,bib:PreskillNotes} from my own
 bibliography file which I provided here.
 
