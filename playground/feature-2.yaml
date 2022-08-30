@@ -1,0 +1,9 @@
+name: llm.feature.floats.FeatureFloatsIncludeGraphicsOnly
+config:
+  float_types:
+    - counter_formatter: Roman
+      float_caption_name: Fig.
+      float_type: figure
+    - counter_formatter: Roman
+      float_caption_name: Tab.
+      float_type: table

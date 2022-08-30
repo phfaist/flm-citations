@@ -7,8 +7,9 @@ llm:
       config:
         sources:
           - $preset: defaults
-          - name: 'bibliographyfile'
-            config:
+          - $preset: merge-config
+            $name: 'bibliographyfile'
+            $config:
               cite_prefix: b
               bibliography_file:
                 - bibpreset.yaml

@@ -1,0 +1,3 @@
+llm:
+  parsing:
+    dollar_inline_math_mode: true

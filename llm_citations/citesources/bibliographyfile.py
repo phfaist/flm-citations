@@ -1,4 +1,5 @@
 import re
+import os.path
 import sys
 import json
 import yaml
@@ -47,21 +48,28 @@ class CitationSourceBibliographyFile(CitationSourceBase):
         doc = kwargs['doc']
 
         if bibliography_file is None:
+            bibliography_files = []
+
             # specified manually in metadata
             if 'bibliography' in doc.metadata['config']:
-                bibliography_file = doc.metadata['config']['bibliography']
-            else:
-                # derived from jobname
-                bibfile = doc.metadata['jobname'] + '.bib.json'
-                if os.path.exists(bibfile):
-                    bibliography_files = [ bibfile ]
-                else:
-                    bibliography_files = []
+                meta_bibliography_files = doc.metadata['config']['bibliography']
+                if isinstance(meta_bibliography_files, str):
+                    meta_bibliography_files = [ meta_bibliography_files ]
+                bibliography_files = bibliography_files + meta_bibliography_files
 
-        if isinstance(bibliography_file, str):
+            # derived from jobname
+            jobnamebibfile = doc.metadata['jobname'] + '.bib.json'
+            if os.path.exists(jobnamebibfile):
+                bibliography_files = bibliography_files + [ jobnamebibfile ]
+
+        elif isinstance(bibliography_file, str):
+
             bibliography_files = [ bibliography_file ]
+
         else:
+
             bibliography_files = bibliography_file
+
 
         bibliography_files = [ _replace_vars(b, doc)
                                for b in bibliography_files ]
