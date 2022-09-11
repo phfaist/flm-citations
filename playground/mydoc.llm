@@ -12,6 +12,9 @@ bibliography:
 %
 \section{Section Title}
 
+Calderbank-Shor-Steane (CSS) stabilizer codes were introduced in
+\cite{arXiv:quant-ph/9512032,doi:10.1103/PhysRevLett.77.793,arXiv:quant-ph/9601029}
+
 Hi there!  This is my document~\cite{arxiv:1211.3141}.
 
 What's up with~\cite{arxiv:2009.04469,arxiv:2208.06306}?  I can also

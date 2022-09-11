@@ -93,7 +93,7 @@ buildjslib = ["Transcrypt (>=3.9.0,<4.0.0)", "PyYAML (>=6.0,<7.0)"]
 type = "git"
 url = "https://github.com/phfaist/llm.git"
 reference = "main"
-resolved_reference = "2e3f0fa5bcdd79853cc7236b21fdb49af0c7b7d0"
+resolved_reference = "38f4d995b13a28f52cae5701c1c4a5a889ec55c2"
 
 [[package]]
 name = "lxml"
