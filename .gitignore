@@ -1,6 +1,7 @@
 *~
 .DS_Store
 __pycache__
+dist
 
 playground/.llm-citations.cache.json
 
