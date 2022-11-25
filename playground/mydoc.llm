@@ -1,15 +1,12 @@
 ---
 # will pick up llmconfig.yaml in cwd
-llm:
-  parsing:
-    enable_comments: true
 bibliography:
 - bibpreset.yaml
 - anotherbibtest.json
 ---
-%
-% Here is a comment!
-%
+%%
+%% Here is a comment!
+%%
 \section{Section Title}
 
 Calderbank-Shor-Steane (CSS) stabilizer codes were introduced in

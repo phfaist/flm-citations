@@ -1,4 +1,4 @@
-name: llm.feature.floats.FeatureFloatsIncludeGraphicsOnly
+name: llm.feature.floats.FeatureFloats
 config:
   float_types:
     - counter_formatter: Roman
