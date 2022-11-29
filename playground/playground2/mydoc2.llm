@@ -1,0 +1,23 @@
+---
+$import:
+  - pkg:llm_citations
+bibliography:
+- ../bibpreset.yaml
+- ../anotherbibtest.json
+---
+
+%% Comments should be allowed ...
+
+\section{Section Title}
+
+Calderbank-Shor-Steane (CSS) stabilizer codes were introduced in
+\cite{arXiv:quant-ph/9512032,doi:10.1103/PhysRevLett.77.793,arXiv:quant-ph/9601029}.
+
+Hi there!  This is my document~\cite{arxiv:1211.3141}.
+
+What's up with~\cite{arxiv:2009.04469,arxiv:2208.06306}?  I can also
+check~\cite{manual:{Me \emph{et al.}, Journal of Results I Should Have Published
+Earlier (2022)}}.  Also a
+citation~\cite{bib:Li2022arXiv_wasserstein,bib:PreskillNotes} from my own
+bibliography file which I provided here.
+

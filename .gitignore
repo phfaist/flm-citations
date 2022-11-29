@@ -3,7 +3,7 @@
 __pycache__
 dist
 
-playground/.llm-citations.cache.json
+.llm-citations.cache.json
 
 playground/*.html
 
