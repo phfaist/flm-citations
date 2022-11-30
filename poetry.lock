@@ -75,7 +75,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "llm"
-version = "0.2.0alpha000009"
+version = "0.2.0alpha000010"
 description = "Latex-Like Markup"
 category = "main"
 optional = false
@@ -86,14 +86,11 @@ develop = false
 pylatexenc = {git = "https://github.com/phfaist/pylatexenc.git", branch = "devel"}
 python-frontmatter = "^1.0.0"
 
-[package.extras]
-buildjslib = ["PyYAML (>=6.0,<7.0)", "Transcrypt (>=3.9.0,<4.0.0)"]
-
 [package.source]
 type = "git"
 url = "https://github.com/phfaist/llm.git"
 reference = "main"
-resolved_reference = "92aa0fe47154ea2b4a545bdf931e6875f65e665e"
+resolved_reference = "a4fc998c5a35f06b8e83f279f9ca0bfeae5e495a"
 
 [[package]]
 name = "lxml"
@@ -122,7 +119,7 @@ develop = false
 type = "git"
 url = "https://github.com/phfaist/pylatexenc.git"
 reference = "devel"
-resolved_reference = "e14ab5e67fa4e812208a27bec4eaab6a818da2fc"
+resolved_reference = "db946861bf905721ca5fb5897034a520af153503"
 
 [[package]]
 name = "python-frontmatter"
