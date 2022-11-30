@@ -1,7 +1,7 @@
 llm:
   features:
-    - $preset: defaults
+    - $defaults:
     - name: 'llm_citations.feature_cite.FeatureCiteAuto'
       config:
         sources:
-          - $preset: defaults
+          - $defaults:

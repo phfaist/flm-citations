@@ -1,7 +1,6 @@
 ---
 # will pick up llmconfig.yaml in cwd
-$preset: import
-$target:
+$import:
   - c1.yaml
   - c2.yaml
 llm:
@@ -9,8 +8,7 @@ llm:
     - name: llm.feature.enumeration.FeatureEnumeration
     - name: llm.feature.headings.FeatureHeadings
 
-    - $preset: import
-      $target:
+    - $import:
         - feature-1.yaml
         - feature-2.yaml
 

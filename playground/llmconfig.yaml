@@ -2,15 +2,15 @@ llm:
   parsing:
     enable_comments: true
   features:
-    - $preset: defaults
+    - $defaults:
     - name: 'llm_citations.feature_cite.FeatureCiteAuto'
       config:
         sources:
-          - $preset: defaults
-          - $preset: merge-config
-            $name: 'bibliographyfile'
-            $config:
-              cite_prefix: b
-              bibliography_file:
-                - bibpreset.yaml
-                - anotherbibtest.json
+          - $defaults:
+          - $merge-config:
+              name: 'bibliographyfile'
+              config:
+                cite_prefix: b
+                bibliography_file:
+                  - bibpreset.yaml
+                  - anotherbibtest.json
