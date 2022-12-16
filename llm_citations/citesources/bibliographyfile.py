@@ -51,8 +51,8 @@ class CitationSourceBibliographyFile(CitationSourceBase):
             bibliography_files = []
 
             # specified manually in metadata
-            if 'bibliography' in doc.metadata['config']:
-                meta_bibliography_files = doc.metadata['config']['bibliography']
+            if 'bibliography' in doc.metadata:
+                meta_bibliography_files = doc.metadata['bibliography']
                 if isinstance(meta_bibliography_files, str):
                     meta_bibliography_files = [ meta_bibliography_files ]
                 bibliography_files = bibliography_files + meta_bibliography_files
