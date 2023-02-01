@@ -282,7 +282,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                  cache_entry_duration_dt=datetime.timedelta(days=30),
                  **kwargs):
 
-        super().__init__(external_citations_provider=None, **kwargs)
+        super().__init__(external_citations_providers=None, **kwargs)
 
         if sources is None:
             sources = _default_citation_sources_spec
