@@ -11,7 +11,8 @@ Use the additional config front matter in your LLM files to enable citations
 with automatic citation retrieval from arXiv, DOI, etc.
 ```yaml
 ---
-$import: pkg:llm_citations
+$import:
+  -  pkg:llm_citations
 bibliography:
   - my-csl-bibliography.yaml
 ---
