@@ -1,5 +1,4 @@
-name: llm.feature.floats.FeatureFloats
-config:
+'llm.feature.floats.FeatureFloats':
   float_types:
     - counter_formatter: Roman
       float_caption_name: Fig.

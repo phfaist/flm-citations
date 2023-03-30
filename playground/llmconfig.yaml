@@ -2,9 +2,7 @@ llm:
   parsing:
     enable_comments: true
   features:
-    - $defaults:
-    - name: 'llm_citations.feature_cite.FeatureCiteAuto'
-      config:
+    'llm_citations.feature_cite':
         sources:
           - $defaults:
           - $merge-config:

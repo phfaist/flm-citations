@@ -5,16 +5,16 @@ $import:
   - c2.yaml
 llm:
   features:
-    - name: llm.feature.enumeration.FeatureEnumeration
-    - name: llm.feature.headings.FeatureHeadings
+    llm.feature.enumeration.FeatureEnumeration: {}
+    llm.feature.headings.FeatureHeadings: {}
 
-    - $import:
-        - feature-1.yaml
-        - feature-2.yaml
+    $import:
+      - feature-1.yaml
+      - feature-2.yaml
 
-    - name: llm.feature.graphics.FeatureSimplePathGraphicsResourceProvider
+    'llm.feature.graphics.FeatureSimplePathGraphicsResourceProvider': {}
 
-    - name: 'llm_citations.feature_cite.FeatureCiteAuto'
+    'llm_citations.feature_cite.FeatureCiteAuto': {}
 
 bibliography:
 - bibpreset.yaml

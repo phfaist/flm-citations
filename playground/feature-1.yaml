@@ -1,6 +1,5 @@
-- name: llm.feature.refs.FeatureRefs
-- name: llm.feature.endnotes.FeatureEndnotes
-  config:
+'llm.feature.refs.FeatureRefs': true
+'llm.feature.endnotes.FeatureEndnotes':
     categories:
       - category_name: footnote
         counter_formatter: roman

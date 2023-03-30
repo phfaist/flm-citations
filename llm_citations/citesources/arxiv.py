@@ -42,6 +42,10 @@ class CitationSourceArxiv(CitationSourceBase):
         self.override_arxiv_dois_file = self.options.get('override_arxiv_dois_file', None)
         self.override_arxiv_dois = self.options.get('override_arxiv_dois', {})
 
+        # silence some arxiv.arxiv messages
+        if not self.options.get('keep_arxiv_arxiv_logging_info_output', False):
+            logging.getLogger('arxiv.arxiv').setLevel(level=logging.WARNING)
+
 
     def source_initialize_run(self):
 

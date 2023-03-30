@@ -64,7 +64,10 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
     add_doi_link = True
     add_url_link = 'only-if-no-other-link' # = only added if there's no arxiv or doi link
 
-    default_config = {
+    # inherited!!
+    #feature_name = 'citations'
+
+    feature_default_config = {
         'sources': _default_citation_sources_spec,
     }
 
@@ -129,7 +132,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
         def load_cache(self):
             if os.path.exists(self.feature.cache_file):
-                logger.debug(f"Loading cache file ‘{self.feature.cache_file}’")
+                #logger.debug(f"Loading cache file ‘{self.feature.cache_file}’")
                 try:
                     with open(self.feature.cache_file, 'r', encoding='utf-8') as f:
                         self.citations_db.update(json.load(f))
@@ -143,12 +146,17 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                             )
                             if dexpires < now:
                                 del self.citations_db[cite_prefix][cite_key]
+                    logger.debug("Loaded cache ‘%s’: %s", self.feature.cache_file,
+                                 ", ".join([
+                                     f"{len(cprefixdb)} {cprefix}"
+                                     for cprefix, cprefixdb in self.citations_db.items()
+                                 ]))
                 except Exception as e:
-                    logger.warning(
-                        f"Failure while loading cache file ‘{self.feature.cache_file}’: "
-                        f"{e}, ignoring ..."
-                    )
-                    return
+                   logger.warning(
+                       f"Failure while loading cache file ‘{self.feature.cache_file}’: "
+                       f"{e}, ignoring ..."
+                   )
+                   return
 
         def save_cache(self):
             with open(self.feature.cache_file, 'w', encoding='utf-8') as fw:
@@ -249,8 +257,16 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
                 for cite_prefix, cite_key_set in retrieve_citation_keys_by_prefix.items():
 
-                    logger.debug(f"Keys to retrieve: {cite_prefix} -> {cite_key_set}")
-                    self.citation_sources[cite_prefix].retrieve_citations(list(cite_key_set))
+                    retrieve_cite_key_set = [
+                        cite_key
+                        for cite_key in cite_key_set
+                        if cite_key not in self.citations_db[cite_prefix]
+                    ]
+
+                    logger.debug(f"Keys to retrieve: {cite_prefix} -> {retrieve_cite_key_set}")
+                    self.citation_sources[cite_prefix].retrieve_citations(
+                        retrieve_cite_key_set
+                    )
 
                 #logger.debug(f"At this point, {self.citations_db = }")
 
@@ -411,3 +427,8 @@ def _generate_citation_llm_from_citeprocjsond(
         except Exception as e:
             logger.critical(f"EXCEPTION!! {e!r}")
             raise
+
+
+# ------------------------------------------------
+
+FeatureClass = FeatureCiteAuto
