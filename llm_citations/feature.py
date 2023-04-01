@@ -115,7 +115,11 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
             bib_csl_style = self.feature.bib_csl_style
             if bib_csl_style is None:
-                bib_csl_style = "harvard1"
+                bib_csl_style = os.path.join(
+                    os.path.dirname(__file__),
+                    'american-physical-society-et-al--patched.csl'
+                )
+                #"harvard1"
             self.bib_csl_style = \
                 citeproc.CitationStylesStyle(bib_csl_style, validate=False)
 
@@ -389,15 +393,13 @@ def _generate_citation_llm_from_citeprocjsond(
             result = bibliography_items[0]
 
             arxivid = citeprocjsond.get('arxivid', None)
-            if arxivid and add_arxiv_link:
-                result += ' \href{https://arxiv.org/abs/'+arxivid+'}{'+arxivid+'}'
-
             doi = citeprocjsond.get('doi', None) or citeprocjsond.get('DOI', None)
+            url = citeprocjsond.get('URL', None)
             if doi and add_doi_link:
                 doiurl = 'https://doi.org/'+urlquote(doi)
                 result += ' \href{'+doiurl+'}{DOI}'
-
-            url = citeprocjsond.get('URL', None)
+            if arxivid and add_arxiv_link:
+                result += ' \href{https://arxiv.org/abs/'+arxivid+'}{'+arxivid+'}'
             if url and (add_url_link is True or
                         (add_url_link == 'only-if-no-other-link'
                          and not arxivid and not doi)):

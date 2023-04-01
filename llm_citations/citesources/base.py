@@ -50,8 +50,11 @@ class CitationSourceBase:
 
         last_chunk_query_monotonic_s = None
 
-        logger.info(f"{self.source_name}: there are "
-                    f"{len(remaining_keys)} citation(s) to query")
+        if len(remaining_keys):
+            logger.info(f"{self.source_name}: there are "
+                        f"{len(remaining_keys)} citation(s) to query")
+        else:
+            logger.debug(f"{self.source_name}: there are no citations to query")
 
         while len(remaining_keys) > 0:
 
