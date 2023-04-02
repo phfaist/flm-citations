@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 from llm.feature.cite import (
     FeatureExternalPrefixedCitations,
-    CitationEndnoteCategory
 )
 
 import citeproc

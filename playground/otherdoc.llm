@@ -8,13 +8,14 @@ llm:
     llm.feature.enumeration.FeatureEnumeration: {}
     llm.feature.headings.FeatureHeadings: {}
 
+    # FIXME BUG: this doesn't seem to work quite as I intended ... :/
     $import:
       - feature-1.yaml
       - feature-2.yaml
 
     'llm.feature.graphics.FeatureSimplePathGraphicsResourceProvider': {}
 
-    'llm_citations.feature_cite.FeatureCiteAuto': {}
+    'llm_citations.feature.FeatureCiteAuto': {}
 
 bibliography:
 - bibpreset.yaml

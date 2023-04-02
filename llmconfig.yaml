@@ -1,5 +1,5 @@
 llm:
   features:
-    'llm_citations.feature_cite':
+    llm_citations:
       sources:
         - $defaults:
