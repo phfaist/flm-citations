@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llm-citations"
-version = "0.2.2"
+version = "0.2.3"
 description = "Support for citations in LLM (see llm package)"
 authors = ["Philippe Faist"]
 license = "MIT"
