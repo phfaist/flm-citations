@@ -16,7 +16,8 @@ class CitationsScanner(LatexNodesVisitor):
         if hasattr(node, 'llmarg_cite_items'):
             # it's a citation node with citations to track
             for cite_item in node.llmarg_cite_items:
-                cite_prefix, cite_key = cite_item
+                cite_prefix, cite_key, cite_extra = \
+                    cite_item['prefix'], cite_item['key'], cite_item['extra']
                 self.encountered_citations.append(
                     dict(
                         cite_prefix=cite_prefix,
