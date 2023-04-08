@@ -5,13 +5,13 @@ dist
 
 .llm-citations.cache.json
 
-playground/*.html
+playground/**/*.html
 
-playground/*.tex
-playground/*.aux
-playground/*.out
-playground/*.pdf
-playground/*.log
-playground/*.fls
-playground/*.fdb_latexmk
-playground/*.synctex.gz
+playground/**/*.tex
+playground/**/*.aux
+playground/**/*.out
+playground/**/*.pdf
+playground/**/*.log
+playground/**/*.fls
+playground/**/*.fdb_latexmk
+playground/**/*.synctex.gz
