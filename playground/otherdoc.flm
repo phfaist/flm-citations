@@ -1,21 +1,21 @@
 ---
-# will pick up llmconfig.yaml in cwd
+# will pick up flmconfig.yaml in cwd
 $import:
   - c1.yaml
   - c2.yaml
-llm:
+flm:
   features:
-    llm.feature.enumeration.FeatureEnumeration: {}
-    llm.feature.headings.FeatureHeadings: {}
+    flm.feature.enumeration.FeatureEnumeration: {}
+    flm.feature.headings.FeatureHeadings: {}
 
     # FIXME BUG: this doesn't seem to work quite as I intended ... :/
     $import:
       - feature-1.yaml
       - feature-2.yaml
 
-    'llm.feature.graphics.FeatureSimplePathGraphicsResourceProvider': {}
+    'flm.feature.graphics.FeatureSimplePathGraphicsResourceProvider': {}
 
-    'llm_citations.feature.FeatureCiteAuto': {}
+    'flm_citations.feature.FeatureCiteAuto': {}
 
 bibliography:
 - bibpreset.yaml

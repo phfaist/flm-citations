@@ -1,8 +1,8 @@
-llm:
+flm:
   parsing:
     enable_comments: true
   features:
-    llm_citations:
+    flm_citations:
         sources:
           - $defaults:
           - $merge-config:

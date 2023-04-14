@@ -1,24 +1,24 @@
-# Extra citations support for LLM
+# Extra citations support for FLM
 
-See the [LLM README file](https://github.com/phfaist/llm/blob/main/README.md).
+See the [FLM README file](https://github.com/phfaist/flm/blob/main/README.md).
 
 Install with:
 ```bash
-$ pip install git+https://github.com/phfaist/llm-citations.git@main
+$ pip install git+https://github.com/phfaist/flm-citations.git@main
 ```
 
-Use the additional config front matter in your LLM files to enable citations
+Use the additional config front matter in your FLM files to enable citations
 with automatic citation retrieval from arXiv, DOI, etc.
 ```yaml
 ---
 $import:
-  -  pkg:llm_citations
+  -  pkg:flm_citations
 bibliography:
   - my-csl-bibliography.yaml
 ---
 ```
 
-Then process your file as usual with `llm`.
+Then process your file as usual with `flm`.
 
 The bibliography file(s) you provide (in the example above,
 `my-csl-bibliography.yaml`) should be in CSL JSON or CSL YAML

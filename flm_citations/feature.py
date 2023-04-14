@@ -9,7 +9,7 @@ from urllib.parse import quote as urlquote
 import logging
 logger = logging.getLogger(__name__)
 
-from llm.feature.cite import (
+from flm.feature.cite import (
     FeatureExternalPrefixedCitations,
 )
 
@@ -18,7 +18,7 @@ import citeproc.source
 import citeproc.source.json
 from . import _cslformatter
 
-from .llmcitationsscanner import CitationsScanner
+from .flmcitationsscanner import CitationsScanner
 
 
 def importclass(fullname):
@@ -56,7 +56,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
       where each value is an instance of `CitationSource` (see `citesources` module).
 
     - ... further arguments are passed on to
-      `llm.feature.cite.FeatureExternalPrefixedCitations`.
+      `flm.feature.cite.FeatureExternalPrefixedCitations`.
     """
 
     add_arxiv_link = True
@@ -72,17 +72,17 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
     class RenderManager(FeatureExternalPrefixedCitations.RenderManager):
         
-        def get_citation_content_llm(self, cite_prefix, cite_key, resource_info):
+        def get_citation_content_flm(self, cite_prefix, cite_key, resource_info):
 
             fdocmgr = self.feature_document_manager
 
             csljson = fdocmgr.get_citation_csljson(cite_prefix, cite_key)
 
-            result = _generate_citation_llm_from_citeprocjsond(
+            result = _generate_citation_flm_from_citeprocjsond(
                 csljson,
                 bib_csl_style=fdocmgr.bib_csl_style,
                 what=str(resource_info),
-                llm_environment=self.render_context.doc.environment,
+                flm_environment=self.render_context.doc.environment,
                 add_arxiv_link=self.feature.add_arxiv_link,
                 add_doi_link=self.feature.add_doi_link,
                 add_url_link=self.feature.add_url_link,
@@ -103,7 +103,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 cconfig = citation_source_spec.get('config', {})
 
                 if '.' not in cname:
-                    cname = f"llm_citations.citesources.{cname}.CitationSourceClass"
+                    cname = f"flm_citations.citesources.{cname}.CitationSourceClass"
 
                 cconfig.update(doc=self.doc)
 
@@ -232,7 +232,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
             self.new_chained_citations.append( (cite_prefix, cite_key) )
 
 
-        def llm_main_scan_fragment(self, fragment):
+        def flm_main_scan_fragment(self, fragment):
 
             scanner = CitationsScanner()
 
@@ -297,7 +297,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
     def __init__(self,
                  sources=None,
                  bib_csl_style=None,
-                 cache_file='.llm-citations.cache.json',
+                 cache_file='.flm-citations.cache.json',
                  cache_entry_duration_dt=datetime.timedelta(days=30),
                  **kwargs):
 
@@ -314,15 +314,15 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
 
 
-def _generate_citation_llm_from_citeprocjsond(
-        citeprocjsond, bib_csl_style, what, llm_environment, *,
+def _generate_citation_flm_from_citeprocjsond(
+        citeprocjsond, bib_csl_style, what, flm_environment, *,
         add_arxiv_link, add_doi_link, add_url_link,
 ):
 
-    if '_formatted_llm_text' in citeprocjsond:
+    if '_formatted_flm_text' in citeprocjsond:
         # work is already done for us -- go!
-        return llm_environment.make_fragment(
-            citeprocjsond['_formatted_llm_text'],
+        return flm_environment.make_fragment(
+            citeprocjsond['_formatted_flm_text'],
             what=what,
             standalone_mode=True,
         )
@@ -347,7 +347,7 @@ def _generate_citation_llm_from_citeprocjsond(
                     del author['name']
 
         # explore the citeprocjsond tree and make sure that all strings are
-        # valid LLM markup
+        # valid FLM markup
         def _sanitize(d):
             if isinstance(d, dict):
                 for k in d.keys():
@@ -360,14 +360,14 @@ def _generate_citation_llm_from_citeprocjsond(
             else:
                 try:
                     # try compiling the given value, suppressing warnings
-                    llm_environment.make_fragment(
+                    flm_environment.make_fragment(
                         str(d),
                         standalone_mode=True,
                         silent=True
                     )
                 except Exception as e:
                     logger.debug(
-                        f"Encountered invalid LLM string {d!r} when "
+                        f"Encountered invalid FLM string {d!r} when "
                         f"composing citation: {e}"
                     )
                     return r'\begin{verbatimtext}' + str(d) + r'\end{verbatimtext}'
@@ -408,7 +408,7 @@ def _generate_citation_llm_from_citeprocjsond(
 
         try:
             logger.debug(f"Attempting to generate entry for {citekey}...")
-            return llm_environment.make_fragment(
+            return flm_environment.make_fragment(
                 _gen_entry(citeprocjsond),
                 what=what,
                 standalone_mode=True,
@@ -416,11 +416,11 @@ def _generate_citation_llm_from_citeprocjsond(
             )
         except Exception:
             logger.debug(f"Error while forming citation entry for {citekey}, trying "
-                         f"again with LLM sanitization on")
+                         f"again with FLM sanitization on")
 
         _sanitize(citeprocjsond)
         try:
-            return llm_environment.make_fragment(
+            return flm_environment.make_fragment(
                 _gen_entry(citeprocjsond),
                 standalone_mode=True,
                 what=what

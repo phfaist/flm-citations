@@ -1,4 +1,4 @@
-'llm.feature.floats.FeatureFloats':
+'flm.feature.floats.FeatureFloats':
   float_types:
     - counter_formatter: Roman
       float_caption_name: Fig.

@@ -31,7 +31,7 @@ class CitationSourceManual(CitationSourceBase):
             self.citation_manager.store_citation(
                 self.cite_prefix, key,
                 {
-                    '_formatted_llm_text': key, # well that was hard
+                    '_formatted_flm_text': key, # well that was hard
                 }
             )
 

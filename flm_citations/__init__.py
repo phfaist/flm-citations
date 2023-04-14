@@ -1,13 +1,13 @@
 
 
 ### FIXME: Merge feature config of imported configs don't work yet ... :/
-### Need to fix this in llm.main.run().  Probably all $import's should be
+### Need to fix this in flm.main.run().  Probably all $import's should be
 ### processed first, before merging anything.
 
-llm_default_import_config = {
-    'llm': {
+flm_default_import_config = {
+    'flm': {
         'features': {
-            'llm_citations': {},
+            'flm_citations': {},
             # {
             #     'sources': [
             #         {

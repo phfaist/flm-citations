@@ -28,7 +28,7 @@ def preformat(text):
     return s
 
 
-class LLMCommandWrapper(str):
+class FLMCommandWrapper(str):
     cmd = None
 
     @classmethod
@@ -37,10 +37,10 @@ class LLMCommandWrapper(str):
         return f'\\{cls.cmd}{{{text}}}'
 
     def __new__(cls, text):
-        return super(LLMCommandWrapper, cls).__new__(cls, cls._wrap(text))
+        return super(FLMCommandWrapper, cls).__new__(cls, cls._wrap(text))
 
 
-class Italic(LLMCommandWrapper):
+class Italic(FLMCommandWrapper):
     cmd = 'textit'
 
 
@@ -48,25 +48,25 @@ class Oblique(Italic):
     pass
 
 
-class Bold(LLMCommandWrapper):
+class Bold(FLMCommandWrapper):
     cmd = 'textbf'
 
 
-class Light(LLMCommandWrapper):
+class Light(FLMCommandWrapper):
     cmd = 'textit' # italic instead
 
 
-class Underline(LLMCommandWrapper):
+class Underline(FLMCommandWrapper):
     cmd = 'textit' # italic instead
 
 
-class Superscript(LLMCommandWrapper):
+class Superscript(FLMCommandWrapper):
     cmd = 'textit' # italic instead
 
 
-class Subscript(LLMCommandWrapper):
+class Subscript(FLMCommandWrapper):
     cmd = 'textit' # italic instead
 
 
-class SmallCaps(LLMCommandWrapper):
+class SmallCaps(FLMCommandWrapper):
     cmd = 'textit' # italic instead

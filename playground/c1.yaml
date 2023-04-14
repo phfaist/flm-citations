@@ -1,4 +1,4 @@
-llm:
+flm:
   parsing:
     enable_comments: true
     comment_start: '%'

@@ -1,5 +1,5 @@
-'llm.feature.refs.FeatureRefs': true
-'llm.feature.endnotes.FeatureEndnotes':
+'flm.feature.refs.FeatureRefs': true
+'flm.feature.endnotes.FeatureEndnotes':
     categories:
       - category_name: footnote
         counter_formatter: roman

@@ -74,7 +74,7 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
-name = "llm"
+name = "flm"
 version = "0.3.0alpha000001"
 description = "Latex-Like Markup"
 category = "main"
@@ -88,7 +88,7 @@ python-frontmatter = "^1.0.0"
 
 [package.source]
 type = "git"
-url = "https://github.com/phfaist/llm.git"
+url = "https://github.com/phfaist/flm.git"
 reference = "main"
 resolved_reference = "803188b93d8f0064cd11dd5e077c309382c782ee"
 
@@ -214,7 +214,7 @@ idna = [
     {file = "idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
     {file = "idna-3.4.tar.gz", hash = "sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4"},
 ]
-llm = []
+flm = []
 lxml = [
     {file = "lxml-4.9.1-cp27-cp27m-macosx_10_15_x86_64.whl", hash = "sha256:98cafc618614d72b02185ac583c6f7796202062c41d2eeecdf07820bad3295ed"},
     {file = "lxml-4.9.1-cp27-cp27m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:c62e8dd9754b7debda0c5ba59d34509c4688f853588d75b53c3791983faa96fc"},
