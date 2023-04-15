@@ -4,7 +4,7 @@ See the [FLM README file](https://github.com/phfaist/flm/blob/main/README.md).
 
 Install with:
 ```bash
-$ pip install flm-citations
+$ pip install git+https://github.com/phfaist/flm-citations.git@main
 ```
 
 Use the additional config front matter in your FLM files to enable citations
