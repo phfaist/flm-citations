@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flm-citations"
-version = "0.2.3"
+version = "0.2.4"
 description = "Support for citations in FLM (see flm package)"
 authors = ["Philippe Faist"]
 license = "MIT"
