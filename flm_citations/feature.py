@@ -328,9 +328,13 @@ def _generate_citation_flm_from_citeprocjsond(
         )
 
     with warnings.catch_warnings():
-        # warnings.simplefilter('ignore', citeproc.source.MissingArgumentWarning)
-        # warnings.simplefilter('ignore', citeproc.source.UnsupportedArgumentWarning)
-        warnings.simplefilter('ignore', UserWarning) # until citeproc-py merges my PR
+        if hasattr(citeproc.source, 'MissingArgumentWarning'):
+            # my patched version
+            warnings.simplefilter('ignore', citeproc.source.MissingArgumentWarning)
+            warnings.simplefilter('ignore', citeproc.source.UnsupportedArgumentWarning)
+        else:
+            # until citeproc-py merges my PR
+            warnings.simplefilter('ignore', UserWarning)
 
         citekey = citeprocjsond['id']
 
