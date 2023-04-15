@@ -34,22 +34,15 @@ optional = false
 python-versions = ">=3.7.0"
 
 [[package]]
-name = "citeproc-py-phfpatch"
-version = "0.999.1"
+name = "citeproc-py"
+version = "0.6.0"
 description = "Citations and bibliography formatter"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-develop = false
 
 [package.dependencies]
 lxml = "*"
-
-[package.source]
-type = "git"
-url = "https://github.com/phfaist/citeproc-py.git"
-reference = "HEAD"
-resolved_reference = "c5904160fda18b199ae051b11aec463666766455"
 
 [[package]]
 name = "feedparser"
@@ -170,7 +163,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "76483ce0c296d4ff3fce9086028ea9bbae1094627c1a2ba95754458ca419bac9"
+content-hash = "ef427d03dc7a4e05f9735f0130ec34a005f3ecffa0f691f094718b306e857f38"
 
 [metadata.files]
 arxiv = [
@@ -262,7 +255,10 @@ charset-normalizer = [
     {file = "charset_normalizer-3.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:830d2948a5ec37c386d3170c483063798d7879037492540f10a475e3fd6f244b"},
     {file = "charset_normalizer-3.1.0-py3-none-any.whl", hash = "sha256:3d9098b479e78c85080c98e1e35ff40b4a31d8953102bb0fd7d1b6f8a2111a3d"},
 ]
-citeproc-py-phfpatch = []
+citeproc-py = [
+    {file = "citeproc-py-0.6.0.tar.gz", hash = "sha256:d9e3a224f936fe2e5033b5d9ffdacab769cedb61d96c4e0cf2f0b488f1d24b4e"},
+    {file = "citeproc_py-0.6.0-py3-none-any.whl", hash = "sha256:ca4c7a5158d6f68cb00a89bb47d9aa0eec7b89b18e574eb08a061b011b602bbe"},
+]
 feedparser = [
     {file = "feedparser-6.0.10-py3-none-any.whl", hash = "sha256:79c257d526d13b944e965f6095700587f27388e50ea16fd245babe4dfae7024f"},
     {file = "feedparser-6.0.10.tar.gz", hash = "sha256:27da485f4637ce7163cdeab13a80312b93b7d0c1b775bef4a47629a3110bca51"},

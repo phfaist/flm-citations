@@ -7,12 +7,12 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-citeproc-py-phfpatch = {'git' = "https://github.com/phfaist/citeproc-py.git"}
 flm-core = ">=0.3.0a10"
 arxiv = "^1.4.2"
 PyYAML = "^6.0"
 requests = "^2.28.1"
 backoff = "^2.1.2"
+citeproc-py = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 
