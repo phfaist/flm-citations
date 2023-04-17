@@ -35,3 +35,26 @@ processed:
 - `\cite{bib:BibKey2023}` - use a citation from any of your
   bibliography files specified in your document front matter.
   
+### In case `citeproc` chokes on certain entries fetched by DOI
+
+Sometimes automatically generated citeproc/JSON entries fetched
+through various available online APIs (doi.org, crossref.org,
+arXiv.org, etc.) might not be fully conforming or exactly
+matching the structure expected by the
+[`citeproc-py` citation formatting library](https://github.com/brechtm/citeproc-py)
+that this project uses.  If you run against such issues, you
+might consider installing a patched version of the library that
+smoothed out some issues I had in the past; you can install it
+with
+```
+> pip install git+https://github.com/phfaist/citeproc-py.git@pr-branch
+```
+until my [upstream PR](https://github.com/brechtm/citeproc-py/pull/132)
+is considered.
+
+
+### Metadata Fetching
+
+Thank you to [arXiv](https://arxiv.org/) and
+[doi.org](https://doi.org/) for use of their open access
+interoperability.
