@@ -1,3 +1,4 @@
+import os.path
 import time
 from urllib.parse import urlparse
 
@@ -80,7 +81,7 @@ class CitationSourceBase:
 
 
     # helper for fetching URLs
-    def fetch_url(self, url, binary=False, json=False, **kwargs):
+    def fetch_url(self, url, binary=False, json=False, cwd='', **kwargs):
 
         if url is None:
             raise ValueError(f"fetch_url(): url is None!")
@@ -95,7 +96,8 @@ class CitationSourceBase:
                 open_args, open_kwargs = ('rb',), {}
             else:
                 open_args, open_kwargs = ('r',), { 'encoding': 'utf-8' }
-            with open(p.path, *open_args, **open_kwargs) as f:
+            fname = os.path.join(cwd, p.path)
+            with open(fname, *open_args, **open_kwargs) as f:
                 return f.read()
 
         req_kwargs = {}

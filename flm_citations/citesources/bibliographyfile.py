@@ -47,11 +47,16 @@ class CitationSourceBibliographyFile(CitationSourceBase):
 
         doc = kwargs['doc']
 
+        if doc.metadata and 'filepath' in doc.metadata:
+            self.cwd = doc.metadata['filepath']['dirname']
+        else:
+            self.cwd = ''
+
         if bibliography_file is None:
             bibliography_files = []
 
             # specified manually in metadata
-            if 'bibliography' in doc.metadata:
+            if doc.metadata and 'bibliography' in doc.metadata:
                 meta_bibliography_files = doc.metadata['bibliography']
                 if isinstance(meta_bibliography_files, str):
                     meta_bibliography_files = [ meta_bibliography_files ]
@@ -85,7 +90,7 @@ class CitationSourceBibliographyFile(CitationSourceBase):
         
         for bibfile in self.bibliography_files:
             logger.debug(f"Loading bibliography ‘{bibfile}’ ...")
-            bibdata = self.fetch_url(bibfile)
+            bibdata = self.fetch_url(bibfile, cwd=self.cwd)
             if bibfile.endswith('.json'):
                 bibdatajson = json.loads(bibdata)
             elif bibfile.endswith( ('.yml', '.yaml') ):

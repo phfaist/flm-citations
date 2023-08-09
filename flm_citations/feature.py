@@ -129,15 +129,23 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
             logger.debug(f"citation_sources are {self.citation_sources!r}")
 
+            doc = self.doc
+            if doc.metadata and 'filepath' in doc.metadata:
+                self.cwd = doc.metadata['filepath']['dirname']
+            else:
+                self.cwd = ''
+
+            self.cache_file_path = os.path.join(self.cwd, self.feature.cache_file)
+
             self.load_cache()
 
             self.new_chained_citations = None
 
         def load_cache(self):
-            if os.path.exists(self.feature.cache_file):
-                #logger.debug(f"Loading cache file ‘{self.feature.cache_file}’")
+            if os.path.exists(self.cache_file_path):
+                #logger.debug(f"Loading cache file ‘{self.cache_file_path}’")
                 try:
-                    with open(self.feature.cache_file, 'r', encoding='utf-8') as f:
+                    with open(self.cache_file_path, 'r', encoding='utf-8') as f:
                         self.citations_db.update(json.load(f))
                     # check for expired entries
                     now = datetime.datetime.now()
@@ -149,20 +157,21 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                             )
                             if dexpires < now:
                                 del self.citations_db[cite_prefix][cite_key]
-                    logger.debug("Loaded cache ‘%s’: %s", self.feature.cache_file,
+
+                    logger.debug("Loaded cache ‘%s’: %s", self.cache_file_path,
                                  ", ".join([
                                      f"{len(cprefixdb)} {cprefix}"
                                      for cprefix, cprefixdb in self.citations_db.items()
                                  ]))
                 except Exception as e:
                    logger.warning(
-                       f"Failure while loading cache file ‘{self.feature.cache_file}’: "
+                       f"Failure while loading cache file ‘{self.cache_file_path}’: "
                        f"{e}, ignoring ..."
                    )
                    return
 
         def save_cache(self):
-            with open(self.feature.cache_file, 'w', encoding='utf-8') as fw:
+            with open(self.cache_file_path, 'w', encoding='utf-8') as fw:
                 json.dump(self.citations_db, fw)
 
 

@@ -20,6 +20,4 @@ flm_default_import_config = {
 }
 
 
-def FeatureClass(*args, **kwargs):
-    from .feature import FeatureClass as _FeatureClass
-    return _FeatureClass(*args, **kwargs)
+from .feature import FeatureClass
