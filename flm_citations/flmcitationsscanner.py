@@ -12,7 +12,7 @@ class CitationsScanner(LatexNodesVisitor):
 
     # ---
 
-    def visit_macro_node(self, node):
+    def visit_macro_node(self, node, **kwargs):
         if hasattr(node, 'flmarg_cite_items'):
             # it's a citation node with citations to track
             for cite_item in node.flmarg_cite_items:
