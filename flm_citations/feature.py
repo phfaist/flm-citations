@@ -241,11 +241,14 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
             self.new_chained_citations.append( (cite_prefix, cite_key) )
 
 
-        def flm_main_scan_fragment(self, fragment):
+        def flm_main_scan_fragment(self, fragment, document_parts_fragments=None, **kwargs):
 
             scanner = CitationsScanner()
 
             fragment.start_node_visitor(scanner)
+            if document_parts_fragments:
+                for frag in document_parts_fragments:
+                    frag.start_node_visitor(scanner)
 
             retrieve_citation_keys_by_prefix = {
                 cite_prefix: set()
