@@ -9,6 +9,8 @@ from urllib.parse import quote as urlquote
 import logging
 logger = logging.getLogger(__name__)
 
+from pylatexenc.latexnodes import LatexWalkerError
+
 from flm.feature.cite import (
     FeatureExternalPrefixedCitations,
 )
@@ -206,7 +208,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 new_cite_key = csljson['chained']['cite_key']
 
                 if new_cite_prefix not in self.citation_sources:
-                    raise ValueError(
+                    raise LatexWalkerError(
                         f"No source registered for cite prefix ‘{new_cite_prefix}’ in "
                         f"chained citation retreival for ‘{cite_prefix}:{cite_key}’"
                     )
@@ -259,7 +261,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 logger.debug(f"Found citation {c=!r}")
 
                 if c['cite_prefix'] not in retrieve_citation_keys_by_prefix:
-                    raise ValueError(
+                    raise LatexWalkerError(
                         f"Invalid citation prefix ‘{c['cite_prefix']}’ in "
                         f"{c['encountered_in']['what']}"
                     )

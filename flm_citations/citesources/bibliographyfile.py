@@ -8,6 +8,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from pylatexenc.latexnodes import LatexWalkerError
+
 from .base import CitationSourceBase
 
 
@@ -96,8 +98,10 @@ class CitationSourceBibliographyFile(CitationSourceBase):
             elif bibfile.endswith( ('.yml', '.yaml') ):
                 bibdatajson = yaml.safe_load(bibdata)
             else:
-                raise ValueError(f"Unknown bibliography format: ‘{bibfile}’ (expected "
-                                 f"CSL-JSON or CSL-YAML)")
+                raise LatexWalkerError(
+                    f"Unknown bibliography format: ‘{bibfile}’ (expected "
+                    f"CSL-JSON or CSL-YAML)"
+                )
                 
             if isinstance(bibdatajson, list):
                 bibdatajson = {
@@ -110,8 +114,8 @@ class CitationSourceBibliographyFile(CitationSourceBase):
 
         for key in chunk_keys:
             if key not in self.bibliography_data:
-                raise ValueError(
-                    f"Bibliography key {key} was not found in bibliography files "
+                raise LatexWalkerError(
+                    f"Bibliography key {key} was not found in bibliography file(s) "
                     + ', '.join([f'‘{b}’' for b in self.bibliography_files])
                 )
 
