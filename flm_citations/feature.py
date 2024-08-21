@@ -92,6 +92,18 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
             return result
 
+        def postprocess(self, value):
+            if self.feature.write_bibtex_file is not None:
+                fname = self.feature.write_bibtex_file
+
+                bibtex_content = self.feature_document_manager.get_export_bibtex_content()
+
+                with open(fname, 'w', encoding='utf-8') as fw:
+                    fw.write( bibtex_content )
+                    
+                logger.info("Wrote bibtex file ‘%s’", fname)
+
+
     class DocumentManager(FeatureExternalPrefixedCitations.DocumentManager):
 
         def initialize(self):
@@ -175,6 +187,58 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
         def save_cache(self):
             with open(self.cache_file_path, 'w', encoding='utf-8') as fw:
                 json.dump(self.citations_db, fw)
+
+
+        def get_export_bibtex_content(self):
+
+            with warnings.catch_warnings():
+                if hasattr(citeproc.source, 'MissingArgumentWarning'):
+                    # my patched version
+                    warnings.simplefilter('ignore', citeproc.source.MissingArgumentWarning)
+                    warnings.simplefilter('ignore', citeproc.source.UnsupportedArgumentWarning)
+                else:
+                    # until citeproc-py merges my PR
+                    warnings.simplefilter('ignore', UserWarning)
+
+                csl_style = citeproc.CitationStylesStyle(
+                    os.path.join( os.path.dirname(__file__), 'bibtex--patched.csl' ),
+                    validate=False
+                )
+
+                all_cites = []
+                for cite_prefix, db in self.citations_db.items():
+                    for cite_key, entryjson in db.items():
+                        the_id = f"{cite_prefix}:{cite_key}"
+                        all_cites.append( (cite_prefix, cite_key, the_id) )
+
+                # do this to make sure chained citations are correctly resolved.
+                fullciteprocjsond = []
+                for cite_prefix, cite_key, full_cite_id in all_cites:
+                    data = dict( self.get_citation_csljson(cite_prefix, cite_key) )
+                    data = _patch_json_entry(data)
+                    data['id'] = full_cite_id
+                    data['key'] = full_cite_id
+                    if 'type' not in data:
+                        data['type'] = None
+                    fullciteprocjsond.append(data)
+
+                logger.debug("Prepared bibtex data: %s", json.dumps(fullciteprocjsond, indent=4))
+
+                bib_source = citeproc.source.json.CiteProcJSON(fullciteprocjsond)
+                bibliography = citeproc.CitationStylesBibliography(
+                    csl_style,
+                    bib_source,
+                    _cslformatter
+                )
+
+                for _, _, the_id in all_cites:
+                    citation = citeproc.Citation([citeproc.CitationItem(the_id)])
+                    bibliography.register(citation)
+
+                # generate bibliography:
+                bibliography_items = [str(item) for item in bibliography.bibliography()]
+
+            return "\n\n".join(bibliography_items)
 
 
         def get_citation_csljson(self, cite_prefix, cite_key):
@@ -313,6 +377,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                  bib_csl_style=None,
                  cache_file='.flm-citations.cache.json',
                  cache_entry_duration_dt=datetime.timedelta(days=30),
+                 write_bibtex_file=None,
                  **kwargs):
 
         super().__init__(external_citations_providers=None, **kwargs)
@@ -326,6 +391,21 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
         self.cache_file = cache_file
         self.cache_entry_duration_dt = cache_entry_duration_dt
 
+        self.write_bibtex_file = write_bibtex_file
+
+
+
+
+def _patch_json_entry(citeprocjsond):
+
+    if 'author' in citeprocjsond:
+        citeprocjsond = copy.copy(citeprocjsond)
+        for author in citeprocjsond['author']:
+            if 'name' in author and 'family' not in author and 'given' not in author:
+                author['family'] = author['name']
+                del author['name']
+
+    return citeprocjsond
 
 
 def _generate_citation_flm_from_citeprocjsond(
@@ -358,12 +438,7 @@ def _generate_citation_flm_from_citeprocjsond(
         #
         # E.g. for authors with 'name': ... instead of 'given': and 'family':
 
-        if 'author' in citeprocjsond:
-            citeprocjsond = copy.copy(citeprocjsond)
-            for author in citeprocjsond['author']:
-                if 'name' in author and 'family' not in author and 'given' not in author:
-                    author['family'] = author['name']
-                    del author['name']
+        citeprocjsond = _patch_json_entry(citeprocjsond)
 
         # explore the citeprocjsond tree and make sure that all strings are
         # valid FLM markup
