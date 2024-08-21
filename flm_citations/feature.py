@@ -93,6 +93,16 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
             return result
 
         def postprocess(self, value):
+            if self.feature.write_csljson_file is not None:
+                fname = self.feature.write_csljson_file
+
+                csljson_data = self.feature_document_manager.get_export_csljson_data()
+
+                with open(fname, 'w', encoding='utf-8') as fw:
+                    json.dump(csljson_data, fw, indent=4)
+                    
+                logger.info("Wrote CSL-JSON file ‘%s’", fname)
+
             if self.feature.write_bibtex_file is not None:
                 fname = self.feature.write_bibtex_file
 
@@ -189,7 +199,31 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 json.dump(self.citations_db, fw)
 
 
+        def get_export_csljson_data(self):
+
+            all_cites = []
+            for cite_prefix, db in self.citations_db.items():
+                for cite_key, entryjson in db.items():
+                    the_id = f"{cite_prefix}:{cite_key}"
+                    all_cites.append( (cite_prefix, cite_key, the_id) )
+
+            # do this to make sure chained citations are correctly resolved.
+            fullciteprocjsond = []
+            for cite_prefix, cite_key, full_cite_id in all_cites:
+                data = dict( self.get_citation_csljson(cite_prefix, cite_key) )
+                data = _patch_json_entry(data)
+                data['id'] = full_cite_id
+                data['key'] = full_cite_id
+                if 'type' not in data:
+                    data['type'] = None
+                fullciteprocjsond.append(data)
+
+            return fullciteprocjsond
+
+
         def get_export_bibtex_content(self):
+
+            fullciteprocjsond = self.get_export_csljson_data()
 
             with warnings.catch_warnings():
                 if hasattr(citeproc.source, 'MissingArgumentWarning'):
@@ -205,24 +239,9 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                     validate=False
                 )
 
-                all_cites = []
-                for cite_prefix, db in self.citations_db.items():
-                    for cite_key, entryjson in db.items():
-                        the_id = f"{cite_prefix}:{cite_key}"
-                        all_cites.append( (cite_prefix, cite_key, the_id) )
-
-                # do this to make sure chained citations are correctly resolved.
-                fullciteprocjsond = []
-                for cite_prefix, cite_key, full_cite_id in all_cites:
-                    data = dict( self.get_citation_csljson(cite_prefix, cite_key) )
-                    data = _patch_json_entry(data)
-                    data['id'] = full_cite_id
-                    data['key'] = full_cite_id
-                    if 'type' not in data:
-                        data['type'] = None
-                    fullciteprocjsond.append(data)
-
-                logger.debug("Prepared bibtex data: %s", json.dumps(fullciteprocjsond, indent=4))
+                # patch entries for bibtex export!
+                for entrydata in fullciteprocjsond:
+                    _patch_in_place_for_bibtex_export(entrydata)
 
                 bib_source = citeproc.source.json.CiteProcJSON(fullciteprocjsond)
                 bibliography = citeproc.CitationStylesBibliography(
@@ -231,7 +250,8 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                     _cslformatter
                 )
 
-                for _, _, the_id in all_cites:
+                for entrydata in fullciteprocjsond:
+                    the_id = entrydata['id']
                     citation = citeproc.Citation([citeproc.CitationItem(the_id)])
                     bibliography.register(citation)
 
@@ -377,6 +397,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                  bib_csl_style=None,
                  cache_file='.flm-citations.cache.json',
                  cache_entry_duration_dt=datetime.timedelta(days=30),
+                 write_csljson_file=None,
                  write_bibtex_file=None,
                  **kwargs):
 
@@ -391,9 +412,17 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
         self.cache_file = cache_file
         self.cache_entry_duration_dt = cache_entry_duration_dt
 
+        self.write_csljson_file = write_csljson_file
         self.write_bibtex_file = write_bibtex_file
 
 
+
+
+def _patch_in_place_for_bibtex_export(entrydata):
+    if 'issued' not in entrydata and 'published' in entrydata:
+        entrydata['issued'] = entrydata['published']
+    if 'ISSN' in entrydata and isinstance(entrydata['ISSN'], list):
+        entrydata['ISSN'] = " ".join(entrydata['ISSN'])
 
 
 def _patch_json_entry(citeprocjsond):
