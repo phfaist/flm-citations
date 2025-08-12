@@ -10,6 +10,14 @@ import requests
 
 class CitationSourceBase:
 
+    class FailedToRetrieveCitation(Exception):
+        def __init__(self, cite_prefix, cite_key, msg):
+            super().__init__(f"‘{cite_prefix}:{cite_key}’: {msg}")
+            self.cite_prefix = cite_prefix
+            self.cite_key = cite_key
+            self.cite_msg = msg
+
+
     def __init__(self, override_options, kwargs, default_options):
         super().__init__()
 

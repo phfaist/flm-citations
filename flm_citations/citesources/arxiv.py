@@ -150,7 +150,10 @@ class CitationSourceArxiv(CitationSourceBase):
                 logger.error(
                     f"No arXiv data received for arXiv id ‘{arxivid}’, what happened?!?"
                 )
-                raise ValueError(f"No arXiv data found for ‘{arxivid}’")
+                raise CitationSourceBase.FailedToRetrieveCitation(
+                    self.cite_prefix, arxivid,
+                    f"No arXiv data found"
+                )
 
             best = None
             for current in versionslist:

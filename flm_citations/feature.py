@@ -20,6 +20,7 @@ import citeproc.source
 import citeproc.source.json
 from . import _cslformatter
 
+from .citesources.base import CitationSourceBase
 from .flmcitationsscanner import CitationsScanner
 
 
@@ -163,7 +164,6 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
             self.load_cache()
 
-            self.new_chained_citations = None
 
         def load_cache(self):
             if os.path.exists(self.cache_file_path):
@@ -263,9 +263,16 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
 
         def get_citation_csljson(self, cite_prefix, cite_key):
             orig_cite_prefix, orig_cite_key = cite_prefix, cite_key
+            cite_chain = [ f"{cite_prefix}:{cite_key}" ]
             set_properties_chain = {}
             while True:
-                csljson = self.citations_db[cite_prefix][cite_key]['entry']
+                try:
+                    csljson = self.citations_db[cite_prefix][cite_key]['entry']
+                except KeyError as e:
+                    fmt_cite_chain = '→'.join([f'‘{key}’' for key in cite_chain])
+                    raise LatexWalkerError(
+                        f"No citation found trying to resolve {fmt_cite_chain}: {e}"
+                    )
                 if 'chained' not in csljson:
                     # make sure we have the correct ID set
                     origid = f"{orig_cite_prefix}:{orig_cite_key}"
@@ -278,6 +285,7 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 # chained citation, follow chain
                 cite_prefix = csljson['chained']['cite_prefix']
                 cite_key = csljson['chained']['cite_key']
+                cite_chain.append( f"{cite_prefix}:{cite_key}" )
                 set_properties_chain = dict(
                     csljson['chained']['set_properties'],
                     **set_properties_chain
@@ -324,8 +332,6 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 },
             )
 
-            self.new_chained_citations.append( (cite_prefix, cite_key) )
-
 
         def flm_main_scan_fragment(self, fragment, document_parts_fragments=None, **kwargs):
 
@@ -340,6 +346,11 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 cite_prefix: set()
                 for cite_prefix in self.citation_sources.keys()
             }
+            where_citation_key_required = {}
+
+            def register_key_to_retrieve(cite_prefix, cite_key, from_where):
+                retrieve_citation_keys_by_prefix[cite_prefix].add(cite_key)
+                where_citation_key_required[f"{cite_prefix}:{cite_key}"] = from_where
 
             for c in scanner.get_encountered_citations():
                 logger.debug(f"Found citation {c=!r}")
@@ -350,12 +361,14 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                         f"{c['encountered_in']['what']}"
                     )
 
-                retrieve_citation_keys_by_prefix[c['cite_prefix']].add(c['cite_key'])
+                register_key_to_retrieve(c['cite_prefix'], c['cite_key'],
+                                         c['encountered_in']['what'])
+
+
+            seen_chained_citations = set()
 
             while any(retrieve_citation_keys_by_prefix.values()):
-
-                self.new_chained_citations = []
-
+                
                 for cite_prefix, cite_key_set in retrieve_citation_keys_by_prefix.items():
 
                     retrieve_cite_key_set = [
@@ -365,11 +378,32 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                     ]
 
                     logger.debug(f"Keys to retrieve: {cite_prefix} -> {retrieve_cite_key_set}")
-                    self.citation_sources[cite_prefix].retrieve_citations(
-                        retrieve_cite_key_set
-                    )
+
+                    # if len(retrieve_cite_key_set) == 0:
+                    #     continue
+
+                    try:
+                        self.citation_sources[cite_prefix].retrieve_citations(
+                            retrieve_cite_key_set
+                        )
+                    except CitationSourceBase.FailedToRetrieveCitation as e:
+                        where = where_citation_key_required[f"{e.cite_prefix}:{e.cite_key}"]
+                        raise LatexWalkerError(
+                            f"Failed to retrieve citation ‘{e.cite_prefix}:{e.cite_key}’, "
+                            f"requested from {where}: {e}"
+                        )
 
                 #logger.debug(f"At this point, {self.citations_db = }")
+
+                new_chained_citations = []
+                for cite_prefix, cite_prefix_db in self.citations_db.items():
+                    for cite_key, cite_data in cite_prefix_db.items():
+                        fullcitekey = f"{cite_prefix}:{cite_key}"
+                        if fullcitekey in seen_chained_citations:
+                            continue
+                        if 'chained' in cite_data['entry']:
+                            new_chained_citations.append( (cite_prefix, cite_key) )
+                            seen_chained_citations.add( fullcitekey )
 
                 retrieve_citation_keys_by_prefix = {
                     cite_prefix: set()
@@ -377,16 +411,19 @@ class FeatureCiteAuto(FeatureExternalPrefixedCitations):
                 }
 
                 # check if there are chained citations that we need to retrieve as well
-                for cite_prefix, cite_key in self.new_chained_citations:
+                for cite_prefix, cite_key in new_chained_citations:
                     csljson = self.citations_db[cite_prefix][cite_key]['entry']
                     chained = csljson['chained']
                     chained_cite_prefix, chained_cite_key = \
                         chained['cite_prefix'], chained['cite_key']
                     if chained_cite_key not in self.citations_db[chained_cite_prefix]:
                         # add this one for retrieval
-                        retrieve_citation_keys_by_prefix[chained_cite_prefix].add(
-                            chained_cite_key
+                        where = (
+                            where_citation_key_required.get(f"{cite_prefix}:{cite_key}", None)
+                            + " → "
+                            + f"{cite_prefix}:{cite_key}"
                         )
+                        register_key_to_retrieve(chained_cite_prefix, chained_cite_key, where)
                         #logger.debug(f"Adding ‘{chained_cite_prefix}:{chained_cite_key}’ "
                         #             f"for retrieval")
 

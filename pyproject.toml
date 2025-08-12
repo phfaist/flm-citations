@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flm-citations"
-version = "0.2.10"
+version = "0.2.11"
 description = "Support for citations in FLM (see flm-core package)"
 authors = ["Philippe Faist"]
 license = "MIT"
@@ -9,7 +9,7 @@ readme = ["README.md"]
 [tool.poetry.dependencies]
 python = "^3.8"
 flm-core = ">=0.3.0a10"
-arxiv = "^1.4.2"
+arxiv = ">=2.0"
 PyYAML = "^6.0"
 requests = "^2.28.1"
 backoff = "^2.1.2"

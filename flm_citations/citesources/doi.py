@@ -47,8 +47,16 @@ class CitationSourceDoi(CitationSourceBase):
 
         doi = chunk_keys[0].strip()
 
+        try:
+            retrieved_csl_json = _get_doi_citeproc_json_object(doi, self)
+        except Exception as e:
+            raise CitationSourceBase.FailedToRetrieveCitation(
+                self.cite_prefix, doi,
+                str(e)
+            ) from e
+
         self.citation_manager.store_citation(
-            self.cite_prefix, doi, _get_doi_citeproc_json_object(doi, self)
+            self.cite_prefix, doi, retrieved_csl_json
         )
 
 
