@@ -5,6 +5,7 @@ options *mean* did.  These tests pin the translation, and pin that every option
 that no longer does anything says so rather than being silently dropped.
 """
 
+import os.path
 import warnings
 
 import pytest
@@ -12,10 +13,22 @@ import pytest
 from flm_citations import _config
 
 
+# The document directory these tests pretend to run in, spelled the way the
+# platform spells an absolute path: resolution goes through `os.path`, so on
+# Windows a bare `/docs` comes back as `D:\docs` (`abspath` stamps on the
+# current drive) with backslashes throughout.  Expectations are built with
+# `docpath` from the same functions, so they compare equal on every platform.
+DOCDIR = os.path.abspath('/docs')
+
+
+def docpath(*parts):
+    return os.path.join(DOCDIR, *parts)
+
+
 class FakeDoc:
     def __init__(self, **metadata):
         self.metadata = {'jobname': 'mydoc',
-                         'filepath': {'dirname': '/docs'},
+                         'filepath': {'dirname': DOCDIR},
                          **metadata}
 
 
@@ -24,11 +37,11 @@ def doc():
     return FakeDoc()
 
 
-def build(sources, doc, cwd='/docs'):
+def build(sources, doc, cwd=DOCDIR):
     return _config.build_source_specs(sources, doc, cwd)
 
 
-def build_quietly(sources, doc, cwd='/docs'):
+def build_quietly(sources, doc, cwd=DOCDIR):
     """Build, returning `(specs, [deprecation messages])`."""
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
@@ -135,7 +148,7 @@ class TestBibliographyFiles:
     def test_paths_are_resolved_against_the_document(self, doc):
         specs = build([{'name': 'bibliographyfile',
                         'config': {'bibliography_file': 'refs.yaml'}}], doc)
-        assert specs[0]['files'] == ['/docs/refs.yaml']
+        assert specs[0]['files'] == [docpath('refs.yaml')]
 
     def test_urls_are_left_alone(self, doc):
         specs = build([{'name': 'bibliographyfile', 'config': {
@@ -147,17 +160,17 @@ class TestBibliographyFiles:
         specs = build([{'name': 'bibliographyfile', 'config': {
             'bibliography_file': ['${jobname}.bib.json'],
         }}], doc)
-        assert specs[0]['files'] == ['/docs/mydoc.bib.json']
+        assert specs[0]['files'] == [docpath('mydoc.bib.json')]
 
     def test_front_matter_bibliography_is_the_default(self, doc):
         doc.metadata['bibliography'] = ['a.yaml', 'b.json']
         specs = build([{'name': 'bibliographyfile'}], doc)
-        assert specs[0]['files'] == ['/docs/a.yaml', '/docs/b.json']
+        assert specs[0]['files'] == [docpath('a.yaml'), docpath('b.json')]
 
     def test_a_bare_string_bibliography_is_accepted(self, doc):
         doc.metadata['bibliography'] = 'only.yaml'
         specs = build([{'name': 'bibliographyfile'}], doc)
-        assert specs[0]['files'] == ['/docs/only.yaml']
+        assert specs[0]['files'] == [docpath('only.yaml')]
 
     def test_an_empty_bibliography_key_is_not_an_error(self, doc):
         # `bibliography:` with nothing under it parses as None — an ordinary
@@ -189,8 +202,8 @@ class TestDeprecatedOptions:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             d, base = _config.normalize_cache_location(
-                '.flm-citations.cache.json', None, None, '/docs')
-        assert (d, base) == ('/docs', '.flm-citations')
+                '.flm-citations.cache.json', None, None, DOCDIR)
+        assert (d, base) == (DOCDIR, '.flm-citations')
         assert any('cache_file' in str(w.message) for w in caught)
 
     def test_cache_file_directory_component_is_honoured(self):
@@ -199,12 +212,12 @@ class TestDeprecatedOptions:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             d, base = _config.normalize_cache_location(
-                'sub/.cites.json', None, None, '/docs')
-        assert (d, base) == ('/docs/sub', '.cites')
+                'sub/.cites.json', None, None, DOCDIR)
+        assert (d, base) == (docpath('sub'), '.cites')
 
     def test_cache_defaults(self):
-        assert _config.normalize_cache_location(None, None, None, '/docs') \
-            == ('/docs', '.flm-citations')
+        assert _config.normalize_cache_location(None, None, None, DOCDIR) \
+            == (DOCDIR, '.flm-citations')
 
     def test_cache_entry_duration_warns(self):
         import datetime
