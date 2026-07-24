@@ -51,7 +51,20 @@ jobs:
       matrix:
         platform:
           - { runner: ubuntu-latest,  target: x86_64 }
-          - { runner: ubuntu-latest,  target: aarch64 }
+          # Native ARM runner, not `ubuntu-latest` + cross.  From an x86_64
+          # host maturin-action builds this target inside
+          # `manylinux2014-cross:aarch64`, whose cross toolchain is gcc 4.8.5 —
+          # old enough that it does not predefine `__ARM_ARCH`, which ring's
+          # `asm_base.h` requires to assemble its pregenerated `.S` files
+          # (ring#1728, closed upstream as not-planned; ring arrives here via
+          # ureq -> rustls).  On an aarch64 host the action picks the *native*
+          # `quay.io/pypa/manylinux2014_aarch64` image instead, so the wheel
+          # keeps the same manylinux2014/glibc-2.17 floor but is built with a
+          # compiler from this decade.  These runners are free for public
+          # repositories; were that to change, the alternative is to stay on
+          # cross and set `CFLAGS_aarch64_unknown_linux_gnu: -D__ARM_ARCH=8`
+          # (the action forwards `CFLAGS*` into the container).
+          - { runner: ubuntu-24.04-arm, target: aarch64 }
           - { runner: macos-latest,   target: x86_64 }
           - { runner: macos-latest,   target: aarch64 }
           - { runner: windows-latest, target: x64 }
