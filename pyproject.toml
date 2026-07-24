@@ -27,8 +27,12 @@ dependencies = [
 
 [project.optional-dependencies]
 # PyYAML is not a runtime dependency any more (YAML is parsed Rust-side), but
-# the tests write config and bibliography fixtures with it.
-test = ["pytest>=7", "PyYAML>=6"]
+# the tests write config and bibliography fixtures with it.  The rendering
+# tests go through the `flm` command line, which lives behind flm-core's
+# `maincmdl` extra (colorlog, python-frontmatter, …) — without it `python -m
+# flm` fails to import, which is invisible on a developer machine that has the
+# extra installed anyway and fatal in a clean CI environment.
+test = ["pytest>=7", "PyYAML>=6", "flm-core[maincmdl]>=0.3.0a10"]
 
 [project.urls]
 Homepage = "https://github.com/phfaist/flm-citations"

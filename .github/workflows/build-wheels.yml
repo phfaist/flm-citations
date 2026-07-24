@@ -23,40 +23,12 @@ permissions:
 
 jobs:
 
+  # The suite itself lives in `ci.yml`, which runs on every push; calling it
+  # here would only duplicate those runs, so this job exists solely as the gate
+  # in front of `publish` and runs only when a release is actually being made.
   test:
-    name: 'test (${{ matrix.os }}, py${{ matrix.python-version }})'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.9', '3.13']
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          # Matches the autocitefetch workspace, which sets the real floor.
-          toolchain: '1.86'
-
-      - name: 'Rust unit tests'
-        # Without `--no-default-features` the `extension-module` feature would
-        # be off anyway (it is not a default), so the test harness links
-        # libpython as it must.
-        run: cargo test
-
-      - name: 'clippy'
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: 'Install the package and its test dependencies'
-        run: pip install -e '.[test]'
-
-      - name: 'pytest (offline only)'
-        run: pytest -m 'not network' -v
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    uses: ./.github/workflows/ci.yml
 
   sdist:
     runs-on: ubuntu-latest
