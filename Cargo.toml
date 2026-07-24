@@ -1,0 +1,61 @@
+[package]
+name = "flm-citations-autocitefetch"
+description = "PyO3 binding exposing the autocitefetch citation-retrieval library to the flm_citations Python package."
+version = "0.3.0"
+edition = "2024"
+license = "MIT"
+# Matches the autocitefetch workspace, which is what actually sets the floor.
+rust-version = "1.86"
+repository = "https://github.com/phfaist/flm-citations"
+publish = false
+
+[lib]
+# Must match `[tool.maturin] module-name` in pyproject.toml minus the package
+# path: the extension is imported as `flm_citations._autocitefetch`.
+name = "_autocitefetch"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Pinned by revision: the upstream repository carries no release tags yet.
+# Replace both `rev`s with a shared `tag = "vX.Y.Z"` once one exists — a moving
+# branch here would make wheel builds irreproducible.
+#
+# SSH rather than https because the repository is currently **private**: cargo
+# cannot authenticate an https git dependency without a credential helper.
+# `.cargo/config.toml` sets `net.git-fetch-with-cli` so this uses the ordinary
+# ssh-agent. Two consequences for release engineering, both unavoidable while
+# the repository stays private:
+#   * a wheel build in CI needs a deploy key (or the repository made public);
+#   * an sdist cannot be built into a wheel by a third party at all.
+# Publishing autocitefetch to crates.io removes both.
+autocitefetch = { git = "ssh://git@github.com/phfaist/autocitefetch.git", rev = "9cc6964e9f8f644e402481c343a1eaa84bc29300" }
+autocitefetch-std = { git = "ssh://git@github.com/phfaist/autocitefetch.git", rev = "9cc6964e9f8f644e402481c343a1eaa84bc29300" }
+
+pyo3 = { version = "0.29", features = ["abi3-py39"] }
+pythonize = "0.29"
+
+# `default-features = false` deliberately, matching the autocitefetch workspace:
+# the core crate is `#![no_std]` and promises never to be built against
+# `serde_json/std`. Under resolver v2 features unify across the build graph, so
+# enabling `std` here would compile it in exactly the configuration it excludes.
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+
+# YAML for bibliography files and arXiv DOI-override maps. Lives here rather
+# than in the library, per autocitefetch's host-parses-config principle: the
+# `no_std` core depends on no format crate but serde_json, and both hooks it
+# offers for anything else (`BibliographyFileSource::with_parser` and
+# `ArxivSource::with_override_dois`) are used from `formats.rs`.
+serde_yaml_ng = "0.10"
+
+[features]
+# maturin turns this on when building a wheel. It is *not* a default: with
+# `extension-module` enabled the crate does not link libpython, so `cargo test`
+# would fail to link the test harness.
+extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+# The binding is a thin layer over a library whose cost is network I/O; trading
+# a little compile time for a smaller wheel is the right way round here.
+opt-level = "s"
+lto = true
+codegen-units = 1

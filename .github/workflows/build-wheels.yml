@@ -1,0 +1,138 @@
+name: 'build-wheels'
+
+# Replaces the old poetry-based `deploy-pypi` workflow: the package now ships a
+# compiled PyO3 extension, so there is one wheel per platform rather than one
+# pure-Python wheel for everything.
+#
+# NOTE — the `autocitefetch` dependency is a **private** git repository (see
+# Cargo.toml).  Every job below therefore needs read access to it, supplied as
+# the `AUTOCITEFETCH_DEPLOY_KEY` secret (a deploy key on that repository).  If
+# and when autocitefetch is published to crates.io — or made public — drop the
+# `webfactory/ssh-agent` steps and the secret along with them.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to PyPI (otherwise only build and upload artifacts)'
+        type: boolean
+        default: false
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+
+  test:
+    name: 'test (${{ matrix.os }}, py${{ matrix.python-version }})'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.9', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUTOCITEFETCH_DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # Matches the autocitefetch workspace, which sets the real floor.
+          toolchain: '1.86'
+
+      - name: 'Rust unit tests'
+        # Without `--no-default-features` the `extension-module` feature would
+        # be off anyway (it is not a default), so the test harness links
+        # libpython as it must.
+        run: cargo test
+
+      - name: 'clippy'
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: 'Install the package and its test dependencies'
+        run: pip install -e '.[test]'
+
+      - name: 'pytest (offline only)'
+        run: pytest -m 'not network' -v
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist
+
+  wheels:
+    name: 'wheels (${{ matrix.platform.runner }}, ${{ matrix.platform.target }})'
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { runner: ubuntu-latest,  target: x86_64 }
+          - { runner: ubuntu-latest,  target: aarch64 }
+          - { runner: macos-latest,   target: x86_64 }
+          - { runner: macos-latest,   target: aarch64 }
+          - { runner: windows-latest, target: x64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUTOCITEFETCH_DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          # `abi3-py39` means one wheel covers every Python from 3.9 up, so
+          # this matrix is over platforms only.
+          args: --release --out dist
+          sccache: 'true'
+          manylinux: auto
+          # The cross-compilation containers need the SSH agent socket and the
+          # host's known_hosts to reach the private git dependency.
+          docker-options: |
+            -e SSH_AUTH_SOCK=/ssh-agent
+            -v ${{ env.SSH_AUTH_SOCK }}:/ssh-agent
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+          path: dist
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: [test, sdist, wheels]
+    runs-on: ubuntu-latest
+    environment: env-deploy-pypi
+    permissions:
+      # Trusted publishing: no API token to rotate. Configure the publisher at
+      # https://pypi.org/manage/project/flm-citations/settings/publishing/
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -2,7 +2,23 @@
 .DS_Store
 __pycache__
 dist
+.pytest_cache
 
+# Rust build artifacts and the compiled extension module maturin drops into the
+# package directory for an editable install.
+/target
+python/flm_citations/_autocitefetch*.so
+python/flm_citations/_autocitefetch*.pyd
+
+# The citation cache. `<base>.jsonl` holds the entries; every throwaway file a
+# run creates (per-writer append logs, their liveness locks, the compaction
+# lock, the atomic-replace staging file) carries a `._<base>` prefix and deletes
+# itself, so one rule covers the lot. Drop the first line to commit the cache
+# and make builds reproducible offline.
+.flm-citations.jsonl
+._.flm-citations*
+
+# Superseded by the above: the pre-0.3 single-file cache. Nothing reads it.
 .flm-citations.cache.json
 
 playground/**/*.html

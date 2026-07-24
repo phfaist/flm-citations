@@ -1,22 +1,46 @@
-[tool.poetry]
-name = "flm-citations"
-version = "0.2.11"
-description = "Support for citations in FLM (see flm-core package)"
-authors = ["Philippe Faist"]
-license = "MIT"
-readme = ["README.md"]
-
-[tool.poetry.dependencies]
-python = "^3.8"
-flm-core = ">=0.3.0a10"
-arxiv = ">=2.0"
-PyYAML = "^6.0"
-requests = "^2.28.1"
-backoff = "^2.1.2"
-citeproc-py = "^0.6.0"
-
-[tool.poetry.dev-dependencies]
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "flm-citations"
+version = "0.3.0"
+description = "Support for citations in FLM (see flm-core package)"
+authors = [{ name = "Philippe Faist" }]
+license = "MIT"
+readme = "README.md"
+# Was ^3.8; 3.8 is end-of-life and abi3-py39 is the floor for a single
+# per-platform wheel.
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Text Processing :: Markup",
+]
+dependencies = [
+    "flm-core>=0.3.0a10",
+    "citeproc-py>=0.6.0",
+]
+
+# `arxiv`, `requests`, `backoff` and `PyYAML` are gone: fetching, retry/backoff
+# and both YAML parsers now live in the Rust extension.
+
+[project.optional-dependencies]
+# PyYAML is not a runtime dependency any more (YAML is parsed Rust-side), but
+# the tests write config and bibliography fixtures with it.
+test = ["pytest>=7", "PyYAML>=6"]
+
+[project.urls]
+Homepage = "https://github.com/phfaist/flm-citations"
+
+[tool.maturin]
+python-source = "python"
+module-name = "flm_citations._autocitefetch"
+features = ["extension-module"]
+include = [{ path = "python/flm_citations/*.csl", format = ["sdist", "wheel"] }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "network: hits arXiv/doi.org; deselect with -m 'not network'",
+]

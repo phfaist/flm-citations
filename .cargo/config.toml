@@ -1,0 +1,6 @@
+# Fetch git dependencies with the `git` CLI rather than cargo's built-in
+# libgit2 client, so `autocitefetch` (a private repository, reached over SSH)
+# authenticates through the user's ssh-agent / ~/.ssh config like every other
+# clone. Cargo's own client only handles a narrow set of key setups.
+[net]
+git-fetch-with-cli = true
