@@ -162,8 +162,8 @@ pytest -m 'not network'    # Python tests, offline
 pytest -m network          # live arXiv/doi.org checks (slow, rate-limited)
 ```
 
-The Rust half depends on `autocitefetch` over SSH (it is a private repository
-for now), so a build needs an SSH key with read access to it.
+The Rust half depends on `autocitefetch`, pulled as a git dependency over
+anonymous https; no credentials are needed to build.
 
 ## License
 

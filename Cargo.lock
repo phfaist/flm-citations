@@ -11,7 +11,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "autocitefetch"
 version = "0.1.0"
-source = "git+ssh://git@github.com/phfaist/autocitefetch.git?rev=9cc6964e9f8f644e402481c343a1eaa84bc29300#9cc6964e9f8f644e402481c343a1eaa84bc29300"
+source = "git+https://github.com/phfaist/autocitefetch.git?rev=9cc6964e9f8f644e402481c343a1eaa84bc29300#9cc6964e9f8f644e402481c343a1eaa84bc29300"
 dependencies = [
  "futures-util",
  "hashbrown 0.15.5",
@@ -23,7 +23,7 @@ dependencies = [
 [[package]]
 name = "autocitefetch-std"
 version = "0.1.0"
-source = "git+ssh://git@github.com/phfaist/autocitefetch.git?rev=9cc6964e9f8f644e402481c343a1eaa84bc29300#9cc6964e9f8f644e402481c343a1eaa84bc29300"
+source = "git+https://github.com/phfaist/autocitefetch.git?rev=9cc6964e9f8f644e402481c343a1eaa84bc29300#9cc6964e9f8f644e402481c343a1eaa84bc29300"
 dependencies = [
  "autocitefetch",
  "fs4",

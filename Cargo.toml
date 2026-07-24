@@ -20,16 +20,12 @@ crate-type = ["cdylib"]
 # Replace both `rev`s with a shared `tag = "vX.Y.Z"` once one exists — a moving
 # branch here would make wheel builds irreproducible.
 #
-# SSH rather than https because the repository is currently **private**: cargo
-# cannot authenticate an https git dependency without a credential helper.
-# `.cargo/config.toml` sets `net.git-fetch-with-cli` so this uses the ordinary
-# ssh-agent. Two consequences for release engineering, both unavoidable while
-# the repository stays private:
-#   * a wheel build in CI needs a deploy key (or the repository made public);
-#   * an sdist cannot be built into a wheel by a third party at all.
-# Publishing autocitefetch to crates.io removes both.
-autocitefetch = { git = "ssh://git@github.com/phfaist/autocitefetch.git", rev = "9cc6964e9f8f644e402481c343a1eaa84bc29300" }
-autocitefetch-std = { git = "ssh://git@github.com/phfaist/autocitefetch.git", rev = "9cc6964e9f8f644e402481c343a1eaa84bc29300" }
+# The repository is public, so anonymous https needs no credentials anywhere.
+# One consequence remains for release engineering: a git dependency keeps this
+# crate off crates.io, and an sdist build still has to reach github. Publishing
+# autocitefetch to crates.io removes that too.
+autocitefetch = { git = "https://github.com/phfaist/autocitefetch.git", rev = "9cc6964e9f8f644e402481c343a1eaa84bc29300" }
+autocitefetch-std = { git = "https://github.com/phfaist/autocitefetch.git", rev = "9cc6964e9f8f644e402481c343a1eaa84bc29300" }
 
 pyo3 = { version = "0.29", features = ["abi3-py39"] }
 pythonize = "0.29"
