@@ -66,7 +66,9 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           # `abi3-py39` means one wheel covers every Python from 3.9 up, so
-          # this matrix is over platforms only.
+          # this matrix is over platforms only.  What users may actually
+          # install is narrower — `requires-python` gates that at 3.10, which
+          # is flm-core's floor.
           args: --release --out dist
           sccache: 'true'
           manylinux: auto

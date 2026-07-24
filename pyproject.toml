@@ -9,16 +9,23 @@ description = "Support for citations in FLM (see flm-core package)"
 authors = [{ name = "Philippe Faist" }]
 license = "MIT"
 readme = "README.md"
-# Was ^3.8; 3.8 is end-of-life and abi3-py39 is the floor for a single
-# per-platform wheel.
-requires-python = ">=3.9"
+# Tracks flm-core, which is >=3.10: its command line calls
+# `fileinput.input(encoding=…)`, and that keyword only exists from 3.10 on, so
+# no flm-core in our range renders a document on 3.9 whatever the metadata
+# claims.  Not to be confused with the abi3-py39 floor below — that one governs
+# which interpreters can *load* the compiled extension, not which ones the
+# Python half runs on.
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Rust",
     "Topic :: Text Processing :: Markup",
 ]
 dependencies = [
-    "flm-core>=0.3.0a10",
+    # 0.4.0b1 is the floor because it is the first release that parses on our
+    # own floor: 0.4.0b0 says >=3.10 but has a backslash inside an f-string
+    # expression, which is 3.12 syntax, so it raises SyntaxError on 3.10/3.11.
+    "flm-core>=0.4.0b1",
     "citeproc-py>=0.6.0",
 ]
 
@@ -32,7 +39,7 @@ dependencies = [
 # `maincmdl` extra (colorlog, python-frontmatter, …) — without it `python -m
 # flm` fails to import, which is invisible on a developer machine that has the
 # extra installed anyway and fatal in a clean CI environment.
-test = ["pytest>=7", "PyYAML>=6", "flm-core[maincmdl]>=0.3.0a10"]
+test = ["pytest>=7", "PyYAML>=6", "flm-core[maincmdl]>=0.4.0b1"]
 
 [project.urls]
 Homepage = "https://github.com/phfaist/flm-citations"

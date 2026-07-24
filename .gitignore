@@ -4,6 +4,8 @@ __pycache__
 dist
 .pytest_cache
 
+/.claude/worktrees
+
 # Rust build artifacts and the compiled extension module maturin drops into the
 # package directory for an editable install.
 /target
