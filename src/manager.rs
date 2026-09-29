@@ -188,6 +188,15 @@ impl PyCitationManager {
             inner = inner
                 .register(reg.prefix.clone(), reg.source)
                 .map_err(|e| PyValueError::new_err(format!("citation source `{}`: {e}", reg.prefix)))?;
+            // After registering, since the override adjusts the source's own
+            // default rather than replacing it.
+            if let Some(over) = reg.refresh_batching {
+                let base = inner
+                    .refresh_batching(&reg.prefix)
+                    .expect("the prefix was just registered");
+                let what = format!("`{}:` citation source", reg.prefix);
+                inner = inner.with_refresh_batching(reg.prefix, over.apply(base, &what)?);
+            }
         }
 
         Ok(PyCitationManager { inner, prefixes })

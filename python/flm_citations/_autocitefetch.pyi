@@ -50,6 +50,15 @@ class CitationManager:
         {"kind": "bib",    "prefix": str, "files": list[str],
                            "format": "auto" | "json" | "yaml", "ttl_seconds": int}
         {"kind": "bib",    "prefix": str, "entries": dict[str, Any]}
+
+    Every spec may also carry `"refresh_batching"`, adjusting the source's own
+    default refresh batching: `"eager"`, `"default"`, or a dict::
+
+        {"eager": bool,              # start from "eager" instead of the default
+         "min_batch": int,           # stale entries worth a request on their own
+         "max_defer_days": float,    # how long past expiry an entry may wait
+         "top_up": False | None | {"min_age_percent": int,   # 0-100
+                                   "fill": "chunk" | int}}
     """
 
     def __init__(

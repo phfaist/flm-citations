@@ -78,6 +78,37 @@ flm:
                 - my-other-bibliography.yaml
 ```
 
+### Refresh batching
+
+Cached entries expire (arXiv after 10 days, DOIs after 360), and refreshing a
+handful of them costs as much rate-limited time as refreshing many.  So by
+default a source waits until enough entries are stale to be worth a request —
+arXiv 20, doi.org 10 — and tops a request that is going out anyway up with
+entries that are nearly due.  Missing citations are always fetched straight
+away, and a stale entry is served from the cache while it waits (at most 2 days
+past expiry for arXiv, 30 for DOIs).  A bibliography file is re-read in full
+whenever any of its entries is refreshed.
+
+A source's `refresh_batching` option adjusts this:
+
+```yaml
+sources:
+  - name: arxiv
+    config:
+      refresh_batching:
+        min_batch: 50          # wait for 50 stale entries...
+        max_defer_days: 7      # ...but never more than a week past expiry
+        top_up:
+          min_age_percent: 50  # fill requests with entries half-way through their lifetime
+          fill: chunk          # up to the request's capacity (or a count, e.g. 5)
+  - name: doi
+    config:
+      refresh_batching: eager  # refetch whatever is due, as soon as it is due
+```
+
+Settings not given keep the source's default; `eager: true` inside the mapping
+starts from `eager` instead, and `top_up: false` never pulls entries forward.
+
 ### The citation cache
 
 Resolved citations are cached in `.flm-citations.jsonl` next to your document:

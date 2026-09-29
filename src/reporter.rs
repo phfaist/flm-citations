@@ -171,6 +171,32 @@ impl Reporter for PyReporter {
                     }
                 }
 
+                // Only emitted when batching changed something, so never noise.
+                // Same wording as the CLI.
+                Event::RefreshPlanned {
+                    prefix,
+                    deferred,
+                    pulled_forward,
+                } => {
+                    if deferred > 0 {
+                        self.info(
+                            py,
+                            &format!(
+                                "{prefix}: {deferred} stale citation(s) left for a larger batch later"
+                            ),
+                        );
+                    }
+                    if pulled_forward > 0 {
+                        self.info(
+                            py,
+                            &format!(
+                                "{prefix}: refreshing {pulled_forward} citation(s) early to fill \
+                                 the request(s)"
+                            ),
+                        );
+                    }
+                }
+
                 // A non-zero count is the interesting thing: it is what makes a
                 // progress denominator grow mid-run.
                 Event::PassFinished { pass, discovered } if discovered > 0 => {
@@ -309,6 +335,16 @@ fn event_dict<'py>(py: Python<'py>, ev: &Event<'_>) -> PyResult<Bound<'py, PyDic
             d.set_item("pass", pass)?;
             d.set_item("cached", cached)?;
             d.set_item("to_fetch", to_fetch)?;
+        }
+        Event::RefreshPlanned {
+            prefix,
+            deferred,
+            pulled_forward,
+        } => {
+            d.set_item("type", "refresh_planned")?;
+            d.set_item("prefix", prefix)?;
+            d.set_item("deferred", deferred)?;
+            d.set_item("pulled_forward", pulled_forward)?;
         }
         Event::PassFinished { pass, discovered } => {
             d.set_item("type", "pass_finished")?;

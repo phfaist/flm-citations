@@ -7,6 +7,7 @@ Everything here is offline — only the `bib` and `manual` sources are used.
 
 import logging
 import os
+import time
 
 import pytest
 
@@ -256,3 +257,67 @@ class TestPolicies:
         with pytest.raises(ValueError, match='unknown option'):
             make_manager([bib('bib', [bibdir / 'refs.yaml'])],
                          ttl_policy={'stale_pct': 50})
+
+
+class TestRefreshBatching:
+
+    def expired_manager(self, make_manager, bibdir, **spec):
+        # A 1 s lifetime and no jitter, so a short sleep hard-expires the entry.
+        mgr = make_manager([bib('bib', [bibdir / 'refs.yaml'], ttl_seconds=1, **spec)],
+                           ttl_policy={'jitter_percent': 0})
+        assert not mgr.retrieve([('bib', 'Knuth1984')])
+        time.sleep(1.2)
+        return mgr
+
+    def test_the_default_refreshes_an_expired_entry(self, make_manager, bibdir):
+        events = []
+        self.expired_manager(make_manager, bibdir)
+        mgr = make_manager([bib('bib', [bibdir / 'refs.yaml'], ttl_seconds=1)],
+                           ttl_policy={'jitter_percent': 0}, on_event=events.append)
+        mgr.retrieve([('bib', 'Knuth1984')])
+        passes = [e for e in events if e['type'] == 'pass_started']
+        assert passes[0]['to_fetch'] == 1
+
+    def test_an_override_defers_a_small_batch(self, make_manager, bibdir):
+        batching = {'min_batch': 5, 'max_defer_days': 1, 'top_up': False}
+        self.expired_manager(make_manager, bibdir, refresh_batching=batching)
+        events = []
+        mgr = make_manager(
+            [bib('bib', [bibdir / 'refs.yaml'], ttl_seconds=1, refresh_batching=batching)],
+            ttl_policy={'jitter_percent': 0}, on_event=events.append)
+        assert not mgr.retrieve([('bib', 'Knuth1984')])
+        assert {'type': 'refresh_planned', 'prefix': 'bib',
+                'deferred': 1, 'pulled_forward': 0} in events
+        assert [e['to_fetch'] for e in events if e['type'] == 'pass_started'] == [0]
+        # Still served from the cache meanwhile.
+        assert mgr.get('bib', 'Knuth1984')['title'] == 'Literate Programming'
+
+    @pytest.mark.parametrize('batching', [
+        'eager', 'default',
+        {'min_batch': 3},
+        {'eager': True, 'max_defer_days': 0.5},
+        {'top_up': None},
+        {'top_up': 'off'},
+        {'top_up': {'min_age_percent': 80, 'fill': 'chunk'}},
+        # The bib source's default has top-up on, so `fill` alone is enough —
+        # which also pins that the source's default reaches the library.
+        {'top_up': {'fill': 3}},
+    ])
+    def test_valid_settings_are_accepted(self, make_manager, bibdir, batching):
+        mgr = make_manager([bib('bib', [bibdir / 'refs.yaml'], refresh_batching=batching)])
+        assert not mgr.retrieve([('bib', 'Knuth1984')])
+
+    @pytest.mark.parametrize('batching, match', [
+        ('lazy', 'expected `eager`'),
+        ({'min_bach': 3}, 'unknown option'),
+        ({'min_batch': -1}, 'non-negative'),
+        ({'max_defer_days': -1}, 'non-negative'),
+        ({'top_up': True}, 'min_age_percent'),
+        ({'top_up': {'min_age_percent': 150}}, 'percentage'),
+        ({'top_up': {'fill': 'all'}}, '`fill`'),
+        # Eager has top-up off, so there is no percentage to keep.
+        ({'eager': True, 'top_up': {'fill': 3}}, 'needs a `min_age_percent`'),
+    ])
+    def test_bad_settings_are_rejected(self, make_manager, bibdir, batching, match):
+        with pytest.raises((ValueError, TypeError), match=match):
+            make_manager([bib('bib', [bibdir / 'refs.yaml'], refresh_batching=batching)])

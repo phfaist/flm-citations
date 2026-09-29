@@ -32,18 +32,22 @@ use pyo3::types::PyDict;
 use autocitefetch::source::{
     ArxivSource, BibliographyFileSource, DoiSource, ManualSource, Resolution, RetrieveCtx, Source,
 };
-use autocitefetch::{BoxFuture, CslValue};
+use autocitefetch::{BoxFuture, CslValue, RefreshBatching};
 
 use crate::convert::{
     get_opt_dict, get_opt_str, get_opt_usize, get_str, get_str_list, opt, reject_unknown_keys,
     to_csl,
 };
+use crate::batching::BatchingOverride;
 use crate::formats::{self, Format};
 
 /// One `(prefix, source)` binding.
 pub struct Registration {
     pub prefix: String,
     pub source: BoxedSource,
+    /// The spec's `refresh_batching` adjustments, applied on top of the
+    /// source's own default once it is registered.
+    pub refresh_batching: Option<BatchingOverride>,
 }
 
 /// A `Box<dyn Source>` that is itself a [`Source`].
@@ -71,6 +75,10 @@ impl Source for BoxedSource {
 
     fn default_ttl(&self) -> Duration {
         self.0.default_ttl()
+    }
+
+    fn refresh_batching(&self) -> RefreshBatching {
+        self.0.refresh_batching()
     }
 
     fn normalize_key(&self, key: &str) -> String {
@@ -118,17 +126,18 @@ pub fn build(spec: &Bound<'_, PyDict>) -> PyResult<Registration> {
                     "chain_dois_to",
                     "override_dois",
                     "override_dois_file",
+                    "refresh_batching",
                 ],
                 &what,
             )?;
             Box::new(build_arxiv(spec, &what)?)
         }
         "doi" => {
-            reject_unknown_keys(spec, &["kind", "prefix"], &what)?;
+            reject_unknown_keys(spec, &["kind", "prefix", "refresh_batching"], &what)?;
             Box::new(DoiSource::new())
         }
         "manual" => {
-            reject_unknown_keys(spec, &["kind", "prefix", "format"], &what)?;
+            reject_unknown_keys(spec, &["kind", "prefix", "format", "refresh_batching"], &what)?;
             // The format name is the inner key of the emitted
             // `{"_ready_formatted": {<format>: <text>}}`. It is required rather
             // than defaulted: the library cannot know what markup its host
@@ -140,7 +149,15 @@ pub fn build(spec: &Bound<'_, PyDict>) -> PyResult<Registration> {
         "bib" => {
             reject_unknown_keys(
                 spec,
-                &["kind", "prefix", "files", "entries", "format", "ttl_seconds"],
+                &[
+                    "kind",
+                    "prefix",
+                    "files",
+                    "entries",
+                    "format",
+                    "ttl_seconds",
+                    "refresh_batching",
+                ],
                 &what,
             )?;
             Box::new(build_bib(spec, &what)?)
@@ -152,9 +169,14 @@ pub fn build(spec: &Bound<'_, PyDict>) -> PyResult<Registration> {
         }
     };
 
+    let refresh_batching = opt(spec, "refresh_batching")?
+        .map(|v| BatchingOverride::parse(&v, &what))
+        .transpose()?;
+
     Ok(Registration {
         prefix,
         source: BoxedSource(source),
+        refresh_batching,
     })
 }
 

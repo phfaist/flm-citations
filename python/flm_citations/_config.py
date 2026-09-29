@@ -234,6 +234,10 @@ def _build_one(entry, doc, cwd, manual_format):
 
     spec = {'kind': kind, 'prefix': prefix}
 
+    # Validated by the extension, which knows the source's default to adjust.
+    if 'refresh_batching' in config:
+        spec['refresh_batching'] = config.pop('refresh_batching')
+
     if kind == 'arxiv':
         _build_arxiv(spec, config, what, doc, cwd)
     elif kind == 'manual':

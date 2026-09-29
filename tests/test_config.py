@@ -192,6 +192,12 @@ class TestDeprecatedOptions:
         assert any(option in m for m in msgs), msgs
         assert option not in specs[0]
 
+    def test_refresh_batching_is_passed_through(self, doc):
+        specs = build([{'name': 'arxiv', 'config': {'refresh_batching': {'min_batch': 50}}},
+                       {'name': 'doi', 'config': {'refresh_batching': 'eager'}}], doc)
+        assert specs[0]['refresh_batching'] == {'min_batch': 50}
+        assert specs[1]['refresh_batching'] == 'eager'
+
     def test_unknown_source_option_is_an_error_not_a_warning(self, doc):
         # A typo must not present as "the option did nothing".
         with pytest.raises(ValueError, match='unknown option'):

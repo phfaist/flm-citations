@@ -17,6 +17,7 @@
 //! Everything importable lives in [`manager`]; the other modules are its
 //! helpers.
 
+mod batching;
 mod convert;
 mod formats;
 mod manager;
