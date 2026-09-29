@@ -113,7 +113,7 @@ dependencies = [
 
 [[package]]
 name = "flm-citations-autocitefetch"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "autocitefetch",
  "autocitefetch-std",

@@ -1,7 +1,7 @@
 [package]
 name = "flm-citations-autocitefetch"
 description = "PyO3 binding exposing the autocitefetch citation-retrieval library to the flm_citations Python package."
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 license = "MIT"
 # Matches the autocitefetch workspace, which is what actually sets the floor.

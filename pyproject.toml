@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "flm-citations"
-version = "0.3.0"
+version = "0.3.1"
 description = "Support for citations in FLM (see flm-core package)"
 authors = [{ name = "Philippe Faist" }]
 license = "MIT"
